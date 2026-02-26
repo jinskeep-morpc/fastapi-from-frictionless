@@ -1,0 +1,39 @@
+[project]
+name = "fastapifromfrictionless"
+dynamic = ["version"]
+description = "Creating FastAPIs from Frictionless Data Packages"
+authors = [
+    {name = "MORPC data team", email = "dataandmaps@morpc.org"}
+    {name = "Jordan Inskeep", email = "jinskeep@morpc.org"}
+]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "requests",
+    "pandas",
+    "frictionless",
+    "SQLmodel",
+    "FastAPI",
+    "fastapi_querybuilder",
+    "sqlalchemy",
+    "xlsxwriter"
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = {attr = "fastapifromfrictionless.__version__"}
+
+[tool.setuptools.packages.find]
+exclude = ["demo"] 
+namespaces = false
+
+[tool.setuptools.package-data]
+"*" = ["*.json"]

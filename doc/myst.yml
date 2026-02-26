@@ -1,0 +1,12 @@
+version: 1
+project:
+    title: FastAPI from Frictionless
+    subtitle: Creating APIs from Frictionless Data Packages
+    description: This is the documentation and development log for the python package fastapi-from-frictionless
+    github: https://https://github.com/jinskeep-morpc/fastapi-from-frictionless
+site:
+    template: book-theme
+    title: Mid-Ohio Regional Planning Commission
+    options:
+        logo: ./assets/HORIZONTAL_LOGOS_PRIMARY_COLOR_V2.png
+        logo_text: Mid-Ohio Regional Planning Commission
