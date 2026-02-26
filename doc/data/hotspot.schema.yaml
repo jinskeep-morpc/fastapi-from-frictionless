@@ -1,0 +1,24 @@
+schema:
+  fields:
+    - name: macaddr
+      type: string
+      constraints:
+        required: true
+    - name: serialnum
+      type: string
+      constraints:
+        required: true
+    - name: status
+      type: string
+      constraints:
+        required: true
+    - name: ssid
+      type: number
+      constraints:
+        required: true
+    - name: password
+      type: number
+      constraints:
+        required: true
+  primaryKey:
+    - macaddr

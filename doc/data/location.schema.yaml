@@ -1,0 +1,28 @@
+schema:
+  fields:
+    - name: address
+      type: string
+      constraints:
+        required: true
+    - name: zipcode
+      type: integer
+      constraints:
+        required: true
+    - name: neighborhood
+      type: string
+      constraints:
+        required: true
+    - name: description
+      type: string
+      constraints:
+        required: true
+    - name: latitude
+      type: number
+      constraints:
+        required: true
+    - name: longitude
+      type: number
+      constraints:
+        required: true
+  primaryKey:
+    - address

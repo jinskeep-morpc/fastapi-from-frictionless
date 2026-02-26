@@ -1,0 +1,16 @@
+schema:
+  fields:
+    - name: macaddr
+      type: string
+      constraints:
+        required: true
+    - name: name
+      type: string
+      constraints:
+        required: true
+    - name: type
+      type: string
+    - name: status
+      type: string
+  primaryKey:
+    - macaddr

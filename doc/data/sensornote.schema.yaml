@@ -1,0 +1,24 @@
+schema:
+  fields:
+    - name: id
+      type: integer
+      constraints:
+        required: true
+    - name: sensor_name
+      type: string
+      constraints:
+        required: true
+    - name: date
+      type: date
+      constraints:
+        required: true
+    - name: author
+      type: string
+      constraints:
+        required: true
+    - name: note
+      type: string
+      constraints:
+        required: true
+  primaryKey:
+    - id
