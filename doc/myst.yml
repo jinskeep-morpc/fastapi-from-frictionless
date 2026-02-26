@@ -3,7 +3,7 @@ project:
     title: FastAPI from Frictionless
     subtitle: Creating APIs from Frictionless Data Packages
     description: This is the documentation and development log for the python package fastapi-from-frictionless
-    github: https://https://github.com/jinskeep-morpc/fastapi-from-frictionless
+    github: https://github.com/jinskeep-morpc/fastapi-from-frictionless
 site:
     template: book-theme
     title: Mid-Ohio Regional Planning Commission
