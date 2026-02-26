@@ -1,12 +1,11 @@
-schema:
-  fields:
-    - name: fullname
-      type: string
-      constraints:
-        required: true
-    - name: email
-      type: string
-    - name: phone
-      type: string
-  primaryKey:
-    - fullname
+fields:
+  - name: fullname
+    type: string
+    constraints:
+      required: true
+  - name: email
+    type: string
+  - name: phone
+    type: string
+primaryKey:
+  - fullname
