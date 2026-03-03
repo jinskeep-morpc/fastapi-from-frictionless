@@ -21,3 +21,10 @@ fields:
       required: true
 primaryKey:
   - id
+foreignKeys:
+  - fields:
+      - sensor_name
+    reference:
+      resource: sensor
+      fields:
+        - name
