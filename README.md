@@ -9,9 +9,9 @@ The goal is to integrate the use of relational databases and queryable APIs with
 
 Roadmap:
 
-- [ ] From a [frictionless data package](https://datapackage.org/standard/data-package/) create [SQLmodels](https://sqlmodel.tiangolo.com/tutorial/code-structure/#hero-model-file) for each resource with sane defaults.
-- [ ] Create a [FastAPI](https://fastapi.tiangolo.com/tutorial/bigger-applications/) router for each model with all basic CRUD.
-- [ ] Implement [Fast API query builder](https://github.com/bhadri01/fastapi-querybuilder) for automatic query capabilities based on models.
+- [x] From a [frictionless data package](https://datapackage.org/standard/data-package/) create [SQLmodels](https://sqlmodel.tiangolo.com/tutorial/code-structure/#hero-model-file) for each resource with sane defaults.
+- [x] Create a [FastAPI](https://fastapi.tiangolo.com/tutorial/bigger-applications/) router for each model with all basic CRUD.
+- [x] Implement [Fast API query builder](https://github.com/bhadri01/fastapi-querybuilder) for automatic query capabilities based on models.
 - [ ] Create workflow for ingesting and exporting data using excel workbook as interface.
 - [ ] Optional: Implement [security measures](https://fastapi.tiangolo.com/tutorial/security/first-steps/) using headers 
 - [ ] Optional: Create front-end that is a form and auto-populates fields. 
