@@ -1,0 +1,346 @@
+resources:
+  - name: contact
+    type: table
+    path: sqlite:///test.db
+    scheme: sqlite
+    format: sql
+    dialect:
+      sql:
+        table: contact
+    schema:
+      fields:
+        - name: created_at
+          type: datetime
+          constraints:
+            required: true
+        - name: updated_at
+          type: datetime
+          constraints:
+            required: true
+        - name: fullname
+          type: string
+          constraints:
+            required: true
+        - name: email
+          type: string
+        - name: phone
+          type: string
+          constraints:
+            required: true
+        - name: id
+          type: integer
+          constraints:
+            required: true
+      primaryKey:
+        - id
+  - name: hotspot
+    type: table
+    path: sqlite:///test.db
+    scheme: sqlite
+    format: sql
+    dialect:
+      sql:
+        table: hotspot
+    schema:
+      fields:
+        - name: created_at
+          type: datetime
+          constraints:
+            required: true
+        - name: updated_at
+          type: datetime
+          constraints:
+            required: true
+        - name: macaddr
+          type: string
+          constraints:
+            required: true
+        - name: serialnum
+          type: string
+          constraints:
+            required: true
+        - name: status
+          type: string
+          constraints:
+            required: true
+        - name: ssid
+          type: number
+          constraints:
+            required: true
+        - name: password
+          type: number
+          constraints:
+            required: true
+        - name: id
+          type: integer
+          constraints:
+            required: true
+      primaryKey:
+        - id
+  - name: location
+    type: table
+    path: sqlite:///test.db
+    scheme: sqlite
+    format: sql
+    dialect:
+      sql:
+        table: location
+    schema:
+      fields:
+        - name: created_at
+          type: datetime
+          constraints:
+            required: true
+        - name: updated_at
+          type: datetime
+          constraints:
+            required: true
+        - name: address
+          type: string
+          constraints:
+            required: true
+        - name: zipcode
+          type: integer
+          constraints:
+            required: true
+        - name: neighborhood
+          type: string
+          constraints:
+            required: true
+        - name: description
+          type: string
+          constraints:
+            required: true
+        - name: latitude
+          type: number
+          constraints:
+            required: true
+        - name: longitude
+          type: number
+          constraints:
+            required: true
+        - name: id
+          type: integer
+          constraints:
+            required: true
+      primaryKey:
+        - id
+  - name: sensor
+    type: table
+    path: sqlite:///test.db
+    scheme: sqlite
+    format: sql
+    dialect:
+      sql:
+        table: sensor
+    schema:
+      fields:
+        - name: created_at
+          type: datetime
+          constraints:
+            required: true
+        - name: updated_at
+          type: datetime
+          constraints:
+            required: true
+        - name: macaddr
+          type: string
+          constraints:
+            required: true
+        - name: name
+          type: string
+          constraints:
+            required: true
+        - name: type
+          type: string
+        - name: status
+          type: string
+      primaryKey:
+        - macaddr
+  - name: deployment
+    type: table
+    path: sqlite:///test.db
+    scheme: sqlite
+    format: sql
+    dialect:
+      sql:
+        table: deployment
+    schema:
+      fields:
+        - name: created_at
+          type: datetime
+          constraints:
+            required: true
+        - name: updated_at
+          type: datetime
+          constraints:
+            required: true
+        - name: name
+          type: string
+          constraints:
+            required: true
+        - name: sensor_name
+          type: string
+          constraints:
+            required: true
+        - name: sensor_index
+          type: integer
+        - name: start_date
+          type: date
+        - name: end_date
+          type: date
+        - name: location_address
+          type: string
+        - name: hotspot_macaddr
+          type: string
+        - name: contact_fullname
+          type: string
+      primaryKey:
+        - name
+      foreignKeys:
+        - fields:
+            - location_address
+          reference:
+            resource: location
+            fields:
+              - address
+        - fields:
+            - contact_fullname
+          reference:
+            resource: contact
+            fields:
+              - fullname
+        - fields:
+            - hotspot_macaddr
+          reference:
+            resource: hotspot
+            fields:
+              - macaddr
+        - fields:
+            - sensor_name
+          reference:
+            resource: sensor
+            fields:
+              - name
+  - name: registration
+    type: table
+    path: sqlite:///test.db
+    scheme: sqlite
+    format: sql
+    dialect:
+      sql:
+        table: registration
+    schema:
+      fields:
+        - name: created_at
+          type: datetime
+          constraints:
+            required: true
+        - name: updated_at
+          type: datetime
+          constraints:
+            required: true
+        - name: macaddr
+          type: string
+          constraints:
+            required: true
+        - name: reg_email
+          type: string
+          constraints:
+            required: true
+        - name: outside
+          type: boolean
+          constraints:
+            required: true
+        - name: sensor_name
+          type: string
+          constraints:
+            required: true
+        - name: publish
+          type: boolean
+          constraints:
+            required: true
+        - name: latitude
+          type: number
+          constraints:
+            required: true
+        - name: longitude
+          type: number
+          constraints:
+            required: true
+        - name: owner_name
+          type: string
+          constraints:
+            required: true
+        - name: owner_email
+          type: string
+          constraints:
+            required: true
+        - name: smsalert_number
+          type: string
+        - name: id
+          type: integer
+          constraints:
+            required: true
+      primaryKey:
+        - id
+      foreignKeys:
+        - fields:
+            - macaddr
+          reference:
+            resource: sensor
+            fields:
+              - macaddr
+        - fields:
+            - sensor_name
+          reference:
+            resource: sensor
+            fields:
+              - name
+  - name: sensornote
+    type: table
+    path: sqlite:///test.db
+    scheme: sqlite
+    format: sql
+    dialect:
+      sql:
+        table: sensornote
+    schema:
+      fields:
+        - name: created_at
+          type: datetime
+          constraints:
+            required: true
+        - name: updated_at
+          type: datetime
+          constraints:
+            required: true
+        - name: sensor_name
+          type: string
+          constraints:
+            required: true
+        - name: date
+          type: date
+          constraints:
+            required: true
+        - name: author
+          type: string
+          constraints:
+            required: true
+        - name: note
+          type: string
+          constraints:
+            required: true
+        - name: id
+          type: integer
+          constraints:
+            required: true
+      primaryKey:
+        - id
+      foreignKeys:
+        - fields:
+            - sensor_name
+          reference:
+            resource: sensor
+            fields:
+              - name
