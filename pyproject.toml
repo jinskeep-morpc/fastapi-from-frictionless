@@ -3,9 +3,10 @@ name = "fastapifromfrictionless"
 dynamic = ["version"]
 description = "Creating FastAPIs from Frictionless Data Packages"
 authors = [
-    {name = "MORPC data team", email = "dataandmaps@morpc.org"}
+    {name = "MORPC data team", email = "dataandmaps@morpc.org"},
     {name = "Jordan Inskeep", email = "jinskeep@morpc.org"}
 ]
+
 license = "MIT"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,6 +14,7 @@ classifiers = [
     "Development Status :: 1 - Planning",
     "Intended Audience :: Developers",
 ]
+
 dependencies = [
     "requests",
     "pandas",

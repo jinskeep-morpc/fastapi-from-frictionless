@@ -12,12 +12,21 @@ fields:
     constraints:
       required: true
   - name: ssid
-    type: number
+    type: string
     constraints:
       required: true
   - name: password
-    type: number
+    type: string
     constraints:
       required: true
+  - name: deployment_name
+    type: string
 primaryKey:
   - macaddr
+foreignKeys:
+  - fields:
+      - deployment_name
+    reference:
+      resource: deployment
+      fields:
+        - name

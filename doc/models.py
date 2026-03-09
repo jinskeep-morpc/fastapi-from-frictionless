@@ -34,6 +34,7 @@ class LocationBase(SQLModel):
     description: str
     latitude: float
     longitude: float
+    deployment_name: str | None = Field(foreign_key='deployment.name')
 
 class Location(LocationBase, TimestampMixin, table=True):
     deployments: list['Deployment'] | None = Relationship(back_populates='locations')
@@ -41,17 +42,46 @@ class Location(LocationBase, TimestampMixin, table=True):
 class LocationCreate(LocationBase):
     pass
 
-class LocationPublic(LocationBase):
-    created_at: datetime
-    updated_at: datetime
-
-
 class LocationUpdate(LocationBase):
+    address: str | None
     zipcode: int | None
     neighborhood: str | None
     description: str | None
     latitude: float | None
     longitude: float | None
+    deployment_name: str | None
+
+class LocationPublic(LocationBase):
+    created_at: datetime 
+    updated_at: datetime
+
+class LocationPublicWithAll(LocationPublic):
+    deployments: Optional['DeploymentPublic'] | None = None
+
+    
+## LinkDeploymentContact models
+class LinkDeploymentContactBase(SQLModel):
+    deployment_name: str | None = Field(primary_key = True, foreign_key='deployment.name')
+    contact_fullname: str | None = Field(primary_key = True, foreign_key='contact.fullname')
+
+class LinkDeploymentContact(LinkDeploymentContactBase, TimestampMixin, table=True):
+    deployments: list['Deployment'] | None = Relationship(back_populates='linkdeploymentcontacts')
+    contacts: list['Contact'] | None = Relationship(back_populates='linkdeploymentcontacts')
+
+class LinkDeploymentContactCreate(LinkDeploymentContactBase):
+    pass
+
+class LinkDeploymentContactUpdate(LinkDeploymentContactBase):
+    deployment_name: str | None
+    contact_fullname: str | None
+
+class LinkDeploymentContactPublic(LinkDeploymentContactBase):
+    created_at: datetime 
+    updated_at: datetime
+
+class LinkDeploymentContactPublicWithAll(LinkDeploymentContactPublic):
+    deployments: Optional['DeploymentPublic'] | None = None
+    contacts: Optional['ContactPublic'] | None = None
 
     
 ## Hotspot models
@@ -59,8 +89,9 @@ class HotspotBase(SQLModel):
     macaddr: str = Field(primary_key = True)
     serialnum: str
     status: str
-    ssid: float
-    password: float
+    ssid: str
+    password: str
+    deployment_name: str | None = Field(foreign_key='deployment.name')
 
 class Hotspot(HotspotBase, TimestampMixin, table=True):
     deployments: list['Deployment'] | None = Relationship(back_populates='hotspots')
@@ -68,16 +99,20 @@ class Hotspot(HotspotBase, TimestampMixin, table=True):
 class HotspotCreate(HotspotBase):
     pass
 
-class HotspotPublic(HotspotBase):
-    created_at: datetime
-    updated_at: datetime
-
-
 class HotspotUpdate(HotspotBase):
+    macaddr: str | None
     serialnum: str | None
     status: str | None
-    ssid: float | None
-    password: float | None
+    ssid: str | None
+    password: str | None
+    deployment_name: str | None
+
+class HotspotPublic(HotspotBase):
+    created_at: datetime 
+    updated_at: datetime
+
+class HotspotPublicWithAll(HotspotPublic):
+    deployments: Optional['DeploymentPublic'] | None = None
 
     
 ## Sensor models
@@ -88,26 +123,69 @@ class SensorBase(SQLModel):
     status: str | None
 
 class Sensor(SensorBase, TimestampMixin, table=True):
+    registrations: list['Registration'] | None = Relationship(back_populates='sensors')
     sensornotes: list['SensorNote'] | None = Relationship(back_populates='sensors')
     deployments: list['Deployment'] | None = Relationship(back_populates='sensors')
 
 class SensorCreate(SensorBase):
     pass
 
-class SensorPublic(SensorBase):
-    created_at: datetime
-    updated_at: datetime
-
-
 class SensorUpdate(SensorBase):
+    macaddr: str | None
     name: str | None
     type: str | None
     status: str | None
 
+class SensorPublic(SensorBase):
+    created_at: datetime 
+    updated_at: datetime
+
+
+    
+## Registration models
+class RegistrationBase(SQLModel):
+    macaddr: str | None
+    reg_email: EmailStr | None
+    outside: bool | None
+    sensor_name: str | None = Field(foreign_key='sensor.name')
+    public: bool | None
+    latitude: float | None
+    longitude: float | None
+    owner_name: str | None
+    owner_email: EmailStr | None
+    smsalert_number: str | None
+
+class Registration(RegistrationBase, TimestampMixin, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    sensors: list['Sensor'] | None = Relationship(back_populates='registrations')
+
+class RegistrationCreate(RegistrationBase):
+    pass
+
+class RegistrationUpdate(RegistrationBase):
+    macaddr: str | None
+    reg_email: EmailStr | None
+    outside: bool | None
+    sensor_name: str | None
+    public: bool | None
+    latitude: float | None
+    longitude: float | None
+    owner_name: str | None
+    owner_email: EmailStr | None
+    smsalert_number: str | None
+
+class RegistrationPublic(RegistrationBase):
+    id: int
+    created_at: datetime 
+    updated_at: datetime
+
+class RegistrationPublicWithAll(RegistrationPublic):
+    sensors: Optional['SensorPublic'] | None = None
+
     
 ## SensorNote models
 class SensorNoteBase(SQLModel):
-    sensor_name: str = Field(foreign_key='sensor.name')
+    sensor_name: str = Field(default=None, foreign_key='sensor.name')
     date: date
     author: str
     note: str
@@ -119,19 +197,19 @@ class SensorNote(SensorNoteBase, TimestampMixin, table=True):
 class SensorNoteCreate(SensorNoteBase):
     pass
 
-class SensorNotePublic(SensorNoteBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-
-class SensorNotePublicWithAll(SensorNotePublic):
-    sensors: list['Sensor'] | None
-
 class SensorNoteUpdate(SensorNoteBase):
     sensor_name: str | None
     date: date | None
     author: str | None
     note: str | None
+
+class SensorNotePublic(SensorNoteBase):
+    id: int
+    created_at: datetime 
+    updated_at: datetime
+
+class SensorNotePublicWithAll(SensorNotePublic):
+    sensors: Optional['SensorPublic'] | None = None
 
     
 ## Contact models
@@ -139,60 +217,58 @@ class ContactBase(SQLModel):
     fullname: str = Field(primary_key = True)
     email: str | None
     phone: str | None
+    deployment_name: str | None
 
 class Contact(ContactBase, TimestampMixin, table=True):
-    deployments: list['Deployment'] | None = Relationship(back_populates='contacts')
+    linkdeploymentcontacts: list['LinkDeploymentContact'] | None = Relationship(back_populates='contacts')
 
 class ContactCreate(ContactBase):
     pass
 
-class ContactPublic(ContactBase):
-    created_at: datetime
-    updated_at: datetime
-
-
 class ContactUpdate(ContactBase):
+    fullname: str | None
     email: str | None
     phone: str | None
+    deployment_name: str | None
+
+class ContactPublic(ContactBase):
+    created_at: datetime 
+    updated_at: datetime
+
 
     
 ## Deployment models
 class DeploymentBase(SQLModel):
     name: str = Field(primary_key = True)
-    sensor_name: str = Field(foreign_key='sensor.name')
+    sensor_name: str = Field(default=None, foreign_key='sensor.name')
     sensor_index: int | None
     start_date: date | None
     end_date: date | None
-    location_address: str | None = Field(foreign_key='location.address')
-    hotspot_macaddr: str | None = Field(foreign_key='hotspot.macaddr')
-    contact_fullname: str | None = Field(foreign_key='contact.fullname')
 
 class Deployment(DeploymentBase, TimestampMixin, table=True):
     locations: list['Location'] | None = Relationship(back_populates='deployments')
-    contacts: list['Contact'] | None = Relationship(back_populates='deployments')
+    linkdeploymentcontacts: list['LinkDeploymentContact'] | None = Relationship(back_populates='deployments')
     hotspots: list['Hotspot'] | None = Relationship(back_populates='deployments')
     sensors: list['Sensor'] | None = Relationship(back_populates='deployments')
 
 class DeploymentCreate(DeploymentBase):
     pass
 
-class DeploymentPublic(DeploymentBase):
-    created_at: datetime
-    updated_at: datetime
-
-class DeploymentPublicWithAll(DeploymentPublic):
-    locations: list['Location'] | None
-    contacts: list['Contact'] | None
-    hotspots: list['Hotspot'] | None
-    sensors: list['Sensor'] | None
-
 class DeploymentUpdate(DeploymentBase):
+    name: str | None
     sensor_name: str | None
     sensor_index: int | None
     start_date: date | None
     end_date: date | None
-    location_address: str | None
-    hotspot_macaddr: str | None
-    contact_fullname: str | None
+
+class DeploymentPublic(DeploymentBase):
+    created_at: datetime 
+    updated_at: datetime
+
+class DeploymentPublicWithAll(DeploymentPublic):
+    sensors: Optional['SensorPublic'] | None = None
+    Locations: Optional['LocationPublic'] | None = None
+    LinkDeploymentContacts: Optional['LinkdeploymentcontactPublic'] | None = None
+    Hotspots: Optional['HotspotPublic'] | None = None
 
     

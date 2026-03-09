@@ -1,0 +1,36 @@
+fields:
+  - name: id
+    type: integer
+    constraints:
+      required: true
+  - name: macaddr
+    type: string
+  - name: reg_email
+    type: string
+    format: email
+  - name: outside
+    type: boolean
+  - name: sensor_name
+    type: string
+  - name: public
+    type: boolean
+  - name: latitude
+    type: number
+  - name: longitude
+    type: number
+  - name: owner_name
+    type: string
+  - name: owner_email
+    type: string
+    format: email
+  - name: smsalert_number
+    type: string
+primaryKey:
+  - id
+foreignKeys:
+  - fields:
+      - sensor_name
+    reference:
+      resource: sensor
+      fields:
+        - name

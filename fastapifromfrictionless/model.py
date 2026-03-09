@@ -66,38 +66,37 @@ class models():
         
         """
         import os
-        import frictionless
 
         self.logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(folder)
 
         self.header = """
-        from typing import Optional, List
-        from uuid import UUID
-        from sqlalchemy import DateTime
-        from sqlmodel import Field, Relationship, SQLModel
-        from datetime import date, datetime, timezone, time, timedelta
-        from pydantic import EmailStr, AnyUrl, Json
-        from geoalchemy2.types import Geometry
+from typing import Optional, List
+from uuid import UUID
+from sqlalchemy import DateTime
+from sqlmodel import Field, Relationship, SQLModel
+from datetime import date, datetime, timezone, time, timedelta
+from pydantic import EmailStr, AnyUrl, Json
+from geoalchemy2.types import Geometry
 
-        def utcnow():
-            '''Returns the current time in UTC.'''
-            return datetime.now(timezone.utc)
+def utcnow():
+    '''Returns the current time in UTC.'''
+    return datetime.now(timezone.utc)
 
-        class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixins/
-            '''A mixin to add created_at and updated_at timestamp fields to a model.'''
+class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixins/
+    '''A mixin to add created_at and updated_at timestamp fields to a model.'''
 
-            created_at: datetime = Field(
-                default_factory=utcnow,
-                nullable=False,
-                sa_type=DateTime(timezone=True)
-            )
-            updated_at: datetime = Field(
-                default_factory=utcnow,
-                nullable=False,
-                sa_column_kwargs={"onupdate": utcnow},
-                sa_type=DateTime(timezone=True)
-            )
-        """
+    created_at: datetime = Field(
+        default_factory=utcnow,
+        nullable=False,
+        sa_type=DateTime(timezone=True)
+    )
+    updated_at: datetime = Field(
+        default_factory=utcnow,
+        nullable=False,
+        sa_column_kwargs={"onupdate": utcnow},
+        sa_type=DateTime(timezone=True)
+    )
+"""
         # Validate folder
         if not os.path.exists(folder):
             logger.error(f"{folder} not a valid path.")
@@ -114,6 +113,8 @@ class models():
             self.logger.info(f"Building model for {filename}")
             model = self.build_model(self.folder, filename)
             self.models.append(model)
+
+        return self
 
     def build_model(self, folder, filename: str) -> str:
         """Build the individual models (base, table, create, update, public, and public with relationships) for a schema
@@ -189,6 +190,8 @@ class models():
                 if not 'required' in field.constraints:
                     field_string += " | None"
                     required = False
+                else:
+                    required = True
 
                 # Check if the field is a primary key
                 if field.name in schema.primary_key:
@@ -196,7 +199,10 @@ class models():
                 
                 # Check if the field is a foreign key
                 if field.name in foreign_keys:
-                    field_string += f" = Field({"default=None, " if required else ""}foreign_key='{field.name.replace('_', '.')}')"
+                    if " = Field(primary_key = True)" in field_string:
+                        field_string  = f"{field_string.rstrip(')')}, foreign_key='{field.name.replace('_', '.')}')"
+                    else:
+                        field_string += f" = Field({"default=None, " if required else ""}foreign_key='{field.name.replace('_', '.')}')"
 
                 self.logger.info(f"{field} converted to {field_string}")
                 basemodel_fields.append(field_string)
@@ -204,7 +210,7 @@ class models():
         basemodel_string = f"""class {name}Base(SQLModel):
     {"\n    ".join(basemodel_fields)}
 """
-        self.logger.info(f"{basemodel_string}")
+        self.logger.debug(f"{basemodel_string}")
 
         # Build table model
         tablemodel_string = f"""class {name}({name}Base, TimestampMixin, table=True):
@@ -231,21 +237,20 @@ class models():
         createmodel_string = f"""class {name}Create({name}Base):
     pass
 """
-        self.logger.info(f"{createmodel_string}")
+        self.logger.debug(f"{createmodel_string}")
 
         # Build update model
         updatemodel_string = f"""class {name}Update({name}Base):\n"""
         for field in basemodel_fields:
             # Remove everything except datatype and None
-            if not 'primary_key' in field:
-                if " = " in field:
-                    field = field.split(" = ")[0]
-                if not ' | None' in field:
-                    updatemodel_string += f"    {field} | None\n" # Add optional if not present
-                else:
-                    updatemodel_string +=  f"    {field}\n"
+            if " = " in field:
+                field = field.split(" = ")[0]
+            if not ' | None' in field:
+                updatemodel_string += f"    {field} | None\n" # Add optional if not present
+            else:
+                updatemodel_string +=  f"    {field}\n"
 
-        self.logger.info(f"{updatemodel_string}")
+        self.logger.debug(f"{updatemodel_string}")
 
 
         # Build public model
@@ -253,16 +258,18 @@ class models():
     created_at: datetime 
     updated_at: datetime
 """
-        self.logger.info(f"{publicmodel_string}")
+        self.logger.debug(f"{publicmodel_string}")
 
         # Build public with relationships model for models with foreign keys to facilitate queries
         relationshipsmodel_string = f""
         if len(foreign_keys) > 0:
             relationshipsmodel_string += f"""class {name}PublicWithAll({name}Public):\n"""
             for fk in foreign_keys:
-                relationshipsmodel_string += f"    {fk.split("_")[0]}s: list['{fk.split('_')[0].capitalize()}'] | None\n"
+                relationshipsmodel_string += f"    {fk.split("_")[0]}s: Optional['{fk.split('_')[0].capitalize()}Public'] | None = None\n"
+            for relationship in relationships:
+                relationshipsmodel_string += f"    {relationship}s: Optional['{relationship.capitalize()}Public'] | None = None\n"
 
-        self.logger.info(f"{relationshipsmodel_string}")
+        self.logger.debug(f"{relationshipsmodel_string}")
 
         return f"""
 ## {name} models
@@ -276,5 +283,6 @@ class models():
 
     def save(self, path: str | PathLike):
         with open(path, 'w') as file:
-            file.write("".join([self.header] + self.models))
+            file_string = "".join([self.header] + self.models)
+            file.write(file_string)
             logger.info(f"models saved to {path}")

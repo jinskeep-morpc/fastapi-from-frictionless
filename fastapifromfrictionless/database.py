@@ -6,26 +6,26 @@ logger = logging.getLogger(__name__)
 
 class database():
     _database_logger = logging.getLogger(__name__).getChild(__qualname__)
-    def __init__(self, filepath):
+    def __init__(self, db_filename):
 
-        self.logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(self.NAME)
+        self.logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(db_filename)
 
-        self.logger.info(f"Building database from schema {filepath}")
-        self.database = self.build(filepath=filepath)
+        self.logger.info(f"Building database from schema {db_filename}")
+        self.database = self.build(filepath=db_filename)
 
     def build(self, filepath: str | PathLike):
         database_string = f"""
-        from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel, create_engine
 
-        sqlite_filename = '{filepath}'
-        sqlite_url = f"sqlite:///{{sqlite_filename}}"
+sqlite_filename = '{filepath}'
+sqlite_url = f"sqlite:///{{sqlite_filename}}"
 
-        connect_args = {{'check_same_thread': False}}
-        engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+connect_args = {{'check_same_thread': False}}
+engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
 
-        def create_db_and_tables():
-            SQLModel.metadata.create_all(engine)
-        """
+def create_db_and_tables():
+    SQLModel.metadata.create_all(engine)
+"""
         return database_string
 
     def save(self, filepath: str | PathLike):

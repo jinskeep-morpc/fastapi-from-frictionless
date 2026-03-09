@@ -7,5 +7,7 @@ fields:
     type: string
   - name: phone
     type: string
+  - name: deployment_name
+    type: string
 primaryKey:
   - fullname

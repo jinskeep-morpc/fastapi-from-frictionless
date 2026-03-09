@@ -20,35 +20,39 @@ def on_startup():
 def get_session():
     with Session(engine) as session:
         yield session
-
+        
 # @app.get('/')
 # def read_schema(*, session: Session = Depends(get_session)):
 #     return {name.lower()}s
 
-    
+        
 # Location requests
-@app.post('/locations/', response_model=LocationPublic)
+@app.post('/location', response_model=LocationPublic)
 def create_location(*, session: Session = Depends(get_session), location: LocationCreate):
     location = Location.model_validate(location)
     session.add(location)
     session.commit()
     session.refresh(location)
     return location
-    
-@app.get('/locations/', response_model=list[LocationPublic])
+        
+@app.get('/location/all', response_model=list[LocationPublicWithAll])
 def read_locations(*, session: Session = Depends(get_session)):
     locations = session.exec(select(Location)).all()
     return locations
-    
-@app.get('/locations/{location_address}', response_model=LocationPublic)
+        
+@app.get('/location/{location_address}', response_model=LocationPublicWithAll)
 def read_location(*, session: Session = Depends(get_session), location_address: str):
     location = session.get(Location, location_address)
     if not location:
         raise HTTPException(status_code=404, detail='Location not found.')
     return location
-    
-    
-@app.patch('/locations/{location_address}', response_model=LocationPublic)
+        
+@app.get('/location/query', response_model=list[LocationPublicWithAll])
+async def query_locations(*, session: AsyncSession = Depends(get_session), query=QueryBuilder(Location)):
+    locations = session.execute(query)
+    return locations.scalars().all()
+        
+@app.patch('/location/{location_address}', response_model=LocationPublic)
 def update_location(*, session: Session = Depends(get_session), location_address: str, location: LocationUpdate):
     db_location = session.get(Location, location_address)
     if not db_location:
@@ -59,8 +63,8 @@ def update_location(*, session: Session = Depends(get_session), location_address
     session.commit()
     session.refresh(db_location)
     return db_location
-    
-@app.delete('/locations/{location_address}')
+        
+@app.delete('/location/{location_address}')
 def delete_location(*, session: Session = Depends(get_session), location_address: str):
     location = session.get(Location, location_address)
     if not location:
@@ -68,31 +72,83 @@ def delete_location(*, session: Session = Depends(get_session), location_address
     session.delete(location)
     session.commit()
     return {'ok': True}
-    
-    
+        
+        
+# LinkDeploymentContact requests
+@app.post('/linkdeploymentcontact', response_model=LinkDeploymentContactPublic)
+def create_linkdeploymentcontact(*, session: Session = Depends(get_session), linkdeploymentcontact: LinkDeploymentContactCreate):
+    linkdeploymentcontact = LinkDeploymentContact.model_validate(linkdeploymentcontact)
+    session.add(linkdeploymentcontact)
+    session.commit()
+    session.refresh(linkdeploymentcontact)
+    return linkdeploymentcontact
+        
+@app.get('/linkdeploymentcontact/all', response_model=list[LinkDeploymentContactPublicWithAll])
+def read_linkdeploymentcontacts(*, session: Session = Depends(get_session)):
+    linkdeploymentcontacts = session.exec(select(LinkDeploymentContact)).all()
+    return linkdeploymentcontacts
+        
+@app.get('/linkdeploymentcontact/{linkdeploymentcontact_deployment_name}', response_model=LinkDeploymentContactPublicWithAll)
+def read_linkdeploymentcontact(*, session: Session = Depends(get_session), linkdeploymentcontact_deployment_name: str):
+    linkdeploymentcontact = session.get(LinkDeploymentContact, linkdeploymentcontact_deployment_name)
+    if not linkdeploymentcontact:
+        raise HTTPException(status_code=404, detail='LinkDeploymentContact not found.')
+    return linkdeploymentcontact
+        
+@app.get('/linkdeploymentcontact/query', response_model=list[LinkDeploymentContactPublicWithAll])
+async def query_linkdeploymentcontacts(*, session: AsyncSession = Depends(get_session), query=QueryBuilder(LinkDeploymentContact)):
+    linkdeploymentcontacts = session.execute(query)
+    return linkdeploymentcontacts.scalars().all()
+        
+@app.patch('/linkdeploymentcontact/{linkdeploymentcontact_deployment_name}', response_model=LinkDeploymentContactPublic)
+def update_linkdeploymentcontact(*, session: Session = Depends(get_session), linkdeploymentcontact_deployment_name: str, linkdeploymentcontact: LinkDeploymentContactUpdate):
+    db_linkdeploymentcontact = session.get(LinkDeploymentContact, linkdeploymentcontact_deployment_name)
+    if not db_linkdeploymentcontact:
+        raise HTTPException(status_code=404, detail=f'LinkDeploymentContact {linkdeploymentcontact_deployment_name} not found.')
+    linkdeploymentcontact_data = linkdeploymentcontact.model_dump(exclude_unset=True)
+    db_linkdeploymentcontact.sqlmodel_update(linkdeploymentcontact_data)
+    session.add(db_linkdeploymentcontact)
+    session.commit()
+    session.refresh(db_linkdeploymentcontact)
+    return db_linkdeploymentcontact
+        
+@app.delete('/linkdeploymentcontact/{linkdeploymentcontact_deployment_name}')
+def delete_linkdeploymentcontact(*, session: Session = Depends(get_session), linkdeploymentcontact_deployment_name: str):
+    linkdeploymentcontact = session.get(LinkDeploymentContact, linkdeploymentcontact_deployment_name)
+    if not linkdeploymentcontact:
+        raise HTTPException(status_code=404, detail=f'LinkDeploymentContact {linkdeploymentcontact_deployment_name} not found.')
+    session.delete(linkdeploymentcontact)
+    session.commit()
+    return {'ok': True}
+        
+        
 # Hotspot requests
-@app.post('/hotspots/', response_model=HotspotPublic)
+@app.post('/hotspot', response_model=HotspotPublic)
 def create_hotspot(*, session: Session = Depends(get_session), hotspot: HotspotCreate):
     hotspot = Hotspot.model_validate(hotspot)
     session.add(hotspot)
     session.commit()
     session.refresh(hotspot)
     return hotspot
-    
-@app.get('/hotspots/', response_model=list[HotspotPublic])
+        
+@app.get('/hotspot/all', response_model=list[HotspotPublicWithAll])
 def read_hotspots(*, session: Session = Depends(get_session)):
     hotspots = session.exec(select(Hotspot)).all()
     return hotspots
-    
-@app.get('/hotspots/{hotspot_macaddr}', response_model=HotspotPublic)
+        
+@app.get('/hotspot/{hotspot_macaddr}', response_model=HotspotPublicWithAll)
 def read_hotspot(*, session: Session = Depends(get_session), hotspot_macaddr: str):
     hotspot = session.get(Hotspot, hotspot_macaddr)
     if not hotspot:
         raise HTTPException(status_code=404, detail='Hotspot not found.')
     return hotspot
-    
-    
-@app.patch('/hotspots/{hotspot_macaddr}', response_model=HotspotPublic)
+        
+@app.get('/hotspot/query', response_model=list[HotspotPublicWithAll])
+async def query_hotspots(*, session: AsyncSession = Depends(get_session), query=QueryBuilder(Hotspot)):
+    hotspots = session.execute(query)
+    return hotspots.scalars().all()
+        
+@app.patch('/hotspot/{hotspot_macaddr}', response_model=HotspotPublic)
 def update_hotspot(*, session: Session = Depends(get_session), hotspot_macaddr: str, hotspot: HotspotUpdate):
     db_hotspot = session.get(Hotspot, hotspot_macaddr)
     if not db_hotspot:
@@ -103,8 +159,8 @@ def update_hotspot(*, session: Session = Depends(get_session), hotspot_macaddr: 
     session.commit()
     session.refresh(db_hotspot)
     return db_hotspot
-    
-@app.delete('/hotspots/{hotspot_macaddr}')
+        
+@app.delete('/hotspot/{hotspot_macaddr}')
 def delete_hotspot(*, session: Session = Depends(get_session), hotspot_macaddr: str):
     hotspot = session.get(Hotspot, hotspot_macaddr)
     if not hotspot:
@@ -112,31 +168,31 @@ def delete_hotspot(*, session: Session = Depends(get_session), hotspot_macaddr: 
     session.delete(hotspot)
     session.commit()
     return {'ok': True}
-    
-    
+        
+        
 # Sensor requests
-@app.post('/sensors/', response_model=SensorPublic)
+@app.post('/sensor', response_model=SensorPublic)
 def create_sensor(*, session: Session = Depends(get_session), sensor: SensorCreate):
     sensor = Sensor.model_validate(sensor)
     session.add(sensor)
     session.commit()
     session.refresh(sensor)
     return sensor
-    
-@app.get('/sensors/', response_model=list[SensorPublic])
+        
+@app.get('/sensor/all', response_model=list[SensorPublic])
 def read_sensors(*, session: Session = Depends(get_session)):
     sensors = session.exec(select(Sensor)).all()
     return sensors
-    
-@app.get('/sensors/{sensor_macaddr}', response_model=SensorPublic)
+        
+@app.get('/sensor/{sensor_macaddr}', response_model=SensorPublic)
 def read_sensor(*, session: Session = Depends(get_session), sensor_macaddr: str):
     sensor = session.get(Sensor, sensor_macaddr)
     if not sensor:
         raise HTTPException(status_code=404, detail='Sensor not found.')
     return sensor
-    
-    
-@app.patch('/sensors/{sensor_macaddr}', response_model=SensorPublic)
+        
+        
+@app.patch('/sensor/{sensor_macaddr}', response_model=SensorPublic)
 def update_sensor(*, session: Session = Depends(get_session), sensor_macaddr: str, sensor: SensorUpdate):
     db_sensor = session.get(Sensor, sensor_macaddr)
     if not db_sensor:
@@ -147,8 +203,8 @@ def update_sensor(*, session: Session = Depends(get_session), sensor_macaddr: st
     session.commit()
     session.refresh(db_sensor)
     return db_sensor
-    
-@app.delete('/sensors/{sensor_macaddr}')
+        
+@app.delete('/sensor/{sensor_macaddr}')
 def delete_sensor(*, session: Session = Depends(get_session), sensor_macaddr: str):
     sensor = session.get(Sensor, sensor_macaddr)
     if not sensor:
@@ -156,35 +212,83 @@ def delete_sensor(*, session: Session = Depends(get_session), sensor_macaddr: st
     session.delete(sensor)
     session.commit()
     return {'ok': True}
-    
-    
+        
+        
+# Registration requests
+@app.post('/registration', response_model=RegistrationPublic)
+def create_registration(*, session: Session = Depends(get_session), registration: RegistrationCreate):
+    registration = Registration.model_validate(registration)
+    session.add(registration)
+    session.commit()
+    session.refresh(registration)
+    return registration
+        
+@app.get('/registration/all', response_model=list[RegistrationPublicWithAll])
+def read_registrations(*, session: Session = Depends(get_session)):
+    registrations = session.exec(select(Registration)).all()
+    return registrations
+        
+@app.get('/registration/{registration_id}', response_model=RegistrationPublicWithAll)
+def read_registration(*, session: Session = Depends(get_session), registration_id: str):
+    registration = session.get(Registration, registration_id)
+    if not registration:
+        raise HTTPException(status_code=404, detail='Registration not found.')
+    return registration
+        
+@app.get('/registration/query', response_model=list[RegistrationPublicWithAll])
+async def query_registrations(*, session: AsyncSession = Depends(get_session), query=QueryBuilder(Registration)):
+    registrations = session.execute(query)
+    return registrations.scalars().all()
+        
+@app.patch('/registration/{registration_id}', response_model=RegistrationPublic)
+def update_registration(*, session: Session = Depends(get_session), registration_id: str, registration: RegistrationUpdate):
+    db_registration = session.get(Registration, registration_id)
+    if not db_registration:
+        raise HTTPException(status_code=404, detail=f'Registration {registration_id} not found.')
+    registration_data = registration.model_dump(exclude_unset=True)
+    db_registration.sqlmodel_update(registration_data)
+    session.add(db_registration)
+    session.commit()
+    session.refresh(db_registration)
+    return db_registration
+        
+@app.delete('/registration/{registration_id}')
+def delete_registration(*, session: Session = Depends(get_session), registration_id: str):
+    registration = session.get(Registration, registration_id)
+    if not registration:
+        raise HTTPException(status_code=404, detail=f'Registration {registration_id} not found.')
+    session.delete(registration)
+    session.commit()
+    return {'ok': True}
+        
+        
 # SensorNote requests
-@app.post('/sensornotes/', response_model=SensorNotePublic)
+@app.post('/sensornote', response_model=SensorNotePublic)
 def create_sensornote(*, session: Session = Depends(get_session), sensornote: SensorNoteCreate):
     sensornote = SensorNote.model_validate(sensornote)
     session.add(sensornote)
     session.commit()
     session.refresh(sensornote)
     return sensornote
-    
-@app.get('/sensornotes/', response_model=list[SensorNotePublicWithAll])
+        
+@app.get('/sensornote/all', response_model=list[SensorNotePublicWithAll])
 def read_sensornotes(*, session: Session = Depends(get_session)):
     sensornotes = session.exec(select(SensorNote)).all()
     return sensornotes
-    
-@app.get('/sensornotes/{sensornote_id}', response_model=SensorNotePublicWithAll)
+        
+@app.get('/sensornote/{sensornote_id}', response_model=SensorNotePublicWithAll)
 def read_sensornote(*, session: Session = Depends(get_session), sensornote_id: str):
     sensornote = session.get(SensorNote, sensornote_id)
     if not sensornote:
         raise HTTPException(status_code=404, detail='SensorNote not found.')
     return sensornote
-    
-@app.get('/sensornotes/query', response_model=list[SensorNotePublicWithAll])
+        
+@app.get('/sensornote/query', response_model=list[SensorNotePublicWithAll])
 async def query_sensornotes(*, session: AsyncSession = Depends(get_session), query=QueryBuilder(SensorNote)):
     sensornotes = session.execute(query)
     return sensornotes.scalars().all()
-    
-@app.patch('/sensornotes/{sensornote_id}', response_model=SensorNotePublic)
+        
+@app.patch('/sensornote/{sensornote_id}', response_model=SensorNotePublic)
 def update_sensornote(*, session: Session = Depends(get_session), sensornote_id: str, sensornote: SensorNoteUpdate):
     db_sensornote = session.get(SensorNote, sensornote_id)
     if not db_sensornote:
@@ -195,8 +299,8 @@ def update_sensornote(*, session: Session = Depends(get_session), sensornote_id:
     session.commit()
     session.refresh(db_sensornote)
     return db_sensornote
-    
-@app.delete('/sensornotes/{sensornote_id}')
+        
+@app.delete('/sensornote/{sensornote_id}')
 def delete_sensornote(*, session: Session = Depends(get_session), sensornote_id: str):
     sensornote = session.get(SensorNote, sensornote_id)
     if not sensornote:
@@ -204,31 +308,31 @@ def delete_sensornote(*, session: Session = Depends(get_session), sensornote_id:
     session.delete(sensornote)
     session.commit()
     return {'ok': True}
-    
-    
+        
+        
 # Contact requests
-@app.post('/contacts/', response_model=ContactPublic)
+@app.post('/contact', response_model=ContactPublic)
 def create_contact(*, session: Session = Depends(get_session), contact: ContactCreate):
     contact = Contact.model_validate(contact)
     session.add(contact)
     session.commit()
     session.refresh(contact)
     return contact
-    
-@app.get('/contacts/', response_model=list[ContactPublic])
+        
+@app.get('/contact/all', response_model=list[ContactPublic])
 def read_contacts(*, session: Session = Depends(get_session)):
     contacts = session.exec(select(Contact)).all()
     return contacts
-    
-@app.get('/contacts/{contact_fullname}', response_model=ContactPublic)
+        
+@app.get('/contact/{contact_fullname}', response_model=ContactPublic)
 def read_contact(*, session: Session = Depends(get_session), contact_fullname: str):
     contact = session.get(Contact, contact_fullname)
     if not contact:
         raise HTTPException(status_code=404, detail='Contact not found.')
     return contact
-    
-    
-@app.patch('/contacts/{contact_fullname}', response_model=ContactPublic)
+        
+        
+@app.patch('/contact/{contact_fullname}', response_model=ContactPublic)
 def update_contact(*, session: Session = Depends(get_session), contact_fullname: str, contact: ContactUpdate):
     db_contact = session.get(Contact, contact_fullname)
     if not db_contact:
@@ -239,8 +343,8 @@ def update_contact(*, session: Session = Depends(get_session), contact_fullname:
     session.commit()
     session.refresh(db_contact)
     return db_contact
-    
-@app.delete('/contacts/{contact_fullname}')
+        
+@app.delete('/contact/{contact_fullname}')
 def delete_contact(*, session: Session = Depends(get_session), contact_fullname: str):
     contact = session.get(Contact, contact_fullname)
     if not contact:
@@ -248,35 +352,35 @@ def delete_contact(*, session: Session = Depends(get_session), contact_fullname:
     session.delete(contact)
     session.commit()
     return {'ok': True}
-    
-    
+        
+        
 # Deployment requests
-@app.post('/deployments/', response_model=DeploymentPublic)
+@app.post('/deployment', response_model=DeploymentPublic)
 def create_deployment(*, session: Session = Depends(get_session), deployment: DeploymentCreate):
     deployment = Deployment.model_validate(deployment)
     session.add(deployment)
     session.commit()
     session.refresh(deployment)
     return deployment
-    
-@app.get('/deployments/', response_model=list[DeploymentPublicWithAll])
+        
+@app.get('/deployment/all', response_model=list[DeploymentPublicWithAll])
 def read_deployments(*, session: Session = Depends(get_session)):
     deployments = session.exec(select(Deployment)).all()
     return deployments
-    
-@app.get('/deployments/{deployment_name}', response_model=DeploymentPublicWithAll)
+        
+@app.get('/deployment/{deployment_name}', response_model=DeploymentPublicWithAll)
 def read_deployment(*, session: Session = Depends(get_session), deployment_name: str):
     deployment = session.get(Deployment, deployment_name)
     if not deployment:
         raise HTTPException(status_code=404, detail='Deployment not found.')
     return deployment
-    
-@app.get('/deployments/query', response_model=list[DeploymentPublicWithAll])
+        
+@app.get('/deployment/query', response_model=list[DeploymentPublicWithAll])
 async def query_deployments(*, session: AsyncSession = Depends(get_session), query=QueryBuilder(Deployment)):
     deployments = session.execute(query)
     return deployments.scalars().all()
-    
-@app.patch('/deployments/{deployment_name}', response_model=DeploymentPublic)
+        
+@app.patch('/deployment/{deployment_name}', response_model=DeploymentPublic)
 def update_deployment(*, session: Session = Depends(get_session), deployment_name: str, deployment: DeploymentUpdate):
     db_deployment = session.get(Deployment, deployment_name)
     if not db_deployment:
@@ -287,8 +391,8 @@ def update_deployment(*, session: Session = Depends(get_session), deployment_nam
     session.commit()
     session.refresh(db_deployment)
     return db_deployment
-    
-@app.delete('/deployments/{deployment_name}')
+        
+@app.delete('/deployment/{deployment_name}')
 def delete_deployment(*, session: Session = Depends(get_session), deployment_name: str):
     deployment = session.get(Deployment, deployment_name)
     if not deployment:
@@ -296,4 +400,4 @@ def delete_deployment(*, session: Session = Depends(get_session), deployment_nam
     session.delete(deployment)
     session.commit()
     return {'ok': True}
-    
+        

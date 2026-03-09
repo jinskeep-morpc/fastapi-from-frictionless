@@ -62,6 +62,8 @@ def get_session():
             endpoint = self.build_endpoint(filename)
             self.endpoints.append(endpoint)
 
+        return self
+
     def build_endpoint(self, filename):
         import frictionless
 
@@ -84,7 +86,7 @@ def get_session():
 
         post_string = f"""
 # {name} requests
-@app.post('/{name.lower()}s/', response_model={name}Public)
+@app.post('/{name.lower()}', response_model={name}Public)
 def create_{name.lower()}(*, session: Session = Depends(get_session), {name.lower()}: {name}Create):
     {name.lower()} = {name}.model_validate({name.lower()})
     session.add({name.lower()})
@@ -92,12 +94,10 @@ def create_{name.lower()}(*, session: Session = Depends(get_session), {name.lowe
     session.refresh({name.lower()})
     return {name.lower()}"""
 
-
-
         pk = schema.primary_key[0]
 
         getall_string = f"""
-@app.get('/{name.lower()}s/', response_model=list[{f'{name}PublicWithAll' if len(foreign_keys)>0 else f'{name}Public'}])
+@app.get('/{name.lower()}/all', response_model=list[{f'{name}PublicWithAll' if len(foreign_keys)>0 else f'{name}Public'}])
 def read_{name.lower()}s(*, session: Session = Depends(get_session)):
     {name.lower()}s = session.exec(select({name})).all()
     return {name.lower()}s"""
@@ -105,7 +105,7 @@ def read_{name.lower()}s(*, session: Session = Depends(get_session)):
 
         if len(foreign_keys) > 0:
             query_string = f"""
-@app.get('/{name.lower()}s/query', response_model=list[{name}PublicWithAll])
+@app.get('/{name.lower()}/query', response_model=list[{name}PublicWithAll])
 async def query_{name.lower()}s(*, session: AsyncSession = Depends(get_session), query=QueryBuilder({name})):
     {name.lower()}s = session.execute(query)
     return {name.lower()}s.scalars().all()"""
@@ -113,7 +113,7 @@ async def query_{name.lower()}s(*, session: AsyncSession = Depends(get_session),
             query_string = ""
 
         get_string = f"""
-@app.get('/{name.lower()}s/{{{name.lower()}_{pk}}}', response_model={f'{name}PublicWithAll' if len(foreign_keys)>0 else f'{name}Public'})
+@app.get('/{name.lower()}/{{{name.lower()}_{pk}}}', response_model={f'{name}PublicWithAll' if len(foreign_keys)>0 else f'{name}Public'})
 def read_{name.lower()}(*, session: Session = Depends(get_session), {name.lower()}_{pk}: str):
     {name.lower()} = session.get({name}, {name.lower()}_{pk})
     if not {name.lower()}:
@@ -121,7 +121,7 @@ def read_{name.lower()}(*, session: Session = Depends(get_session), {name.lower(
     return {name.lower()}"""
 
         update_string = f"""
-@app.patch('/{name.lower()}s/{{{name.lower()}_{pk}}}', response_model={name}Public)
+@app.patch('/{name.lower()}/{{{name.lower()}_{pk}}}', response_model={name}Public)
 def update_{name.lower()}(*, session: Session = Depends(get_session), {name.lower()}_{pk}: str, {name.lower()}: {name}Update):
     db_{name.lower()} = session.get({name}, {name.lower()}_{pk})
     if not db_{name.lower()}:
@@ -134,7 +134,7 @@ def update_{name.lower()}(*, session: Session = Depends(get_session), {name.lowe
     return db_{name.lower()}"""
 
         delete_string = f"""
-@app.delete('/{name.lower()}s/{{{name.lower()}_{pk}}}')
+@app.delete('/{name.lower()}/{{{name.lower()}_{pk}}}')
 def delete_{name.lower()}(*, session: Session = Depends(get_session), {name.lower()}_{pk}: str):
     {name.lower()} = session.get({name}, {name.lower()}_{pk})
     if not {name.lower()}:
@@ -156,4 +156,4 @@ def delete_{name.lower()}(*, session: Session = Depends(get_session), {name.lowe
 
     def save(self, filepath: str | os.PathLike):
         with open(filepath, 'w') as file:
-            file.write("".join([self.app_header] + self.endpoints))
+            file.write("".join([self.header] + self.endpoints))

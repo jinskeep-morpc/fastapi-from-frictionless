@@ -23,5 +23,14 @@ fields:
     type: number
     constraints:
       required: true
+  - name: deployment_name
+    type: string
 primaryKey:
   - address
+foreignKeys:
+  - fields:
+      - deployment_name
+    reference:
+      resource: deployment
+      fields:
+        - name
