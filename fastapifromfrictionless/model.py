@@ -159,8 +159,11 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
                 if len(other_schema.foreign_keys) > 0:
                     for fk in other_schema.foreign_keys:
                         if fk['reference']['resource'] == name.lower():
+                            self.logger.debug(f"{name} is referenced by {other_name}")
                             relationships.append(other_name)
-        if len(relationships) > 0 :
+                        else:
+                            self.logger.debug(f"{name} not reference by {other_name}")
+        if len(relationships) == 0 :
             self.logger.info(f'{name} not referenced by other schemas.')
         else:
             self.logger.info(f"{name} is referenced by {relationships}")
@@ -168,7 +171,14 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
         # Check if primary key is 'id'. These will be build in SQLmodel to be auto-incrementing. 
         auto_id = "id" in schema.primary_key
         if auto_id:
-            logger.info(f"Primary key is 'id'. Will add to table model with autoincrement.")
+            self.logger.info(f"Primary key is 'id'. Will add to table model with autoincrement.")
+
+        # Check if schema is for a many-to-many link table
+        if (len(foreign_keys) == 2) & (len(schema.primary_key)==2):
+            link_table = True
+            self.logger.info(f"{name} is a many-to-many link table.")
+        else:
+            link_table = False
 
         # Build the base model
         basemodel_fields = []
@@ -262,13 +272,22 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
 
         # Build public with relationships model for models with foreign keys to facilitate queries
         relationshipsmodel_string = f""
-        if len(foreign_keys) > 0:
+        if (len(foreign_keys) > 0) | (len(relationships) > 0):
             relationshipsmodel_string += f"""class {name}PublicWithAll({name}Public):\n"""
             for fk in foreign_keys:
-                relationshipsmodel_string += f"    {fk.split("_")[0]}s: Optional['{fk.split('_')[0].capitalize()}Public'] | None = None\n"
+                relationshipsmodel_string += f"    {fk.split("_")[0]}s: Optional[List['{fk.split('_')[0].capitalize()}Public']] | None = None\n"
             for relationship in relationships:
-                relationshipsmodel_string += f"    {relationship}s: Optional['{relationship.capitalize()}Public'] | None = None\n"
+                if relationship.startswith('Link'):
+                    joined = relationship.replace('Link', "").replace(name, "").replace('-', "")
+                    relationshipsmodel_string += f"    {relationship.lower()}s: Optional[List['{relationship}PublicWith{joined}']] | None = None\n"
+                else:
+                    relationshipsmodel_string += f"    {relationship.lower()}s: Optional[List['{relationship}Public']] | None = None\n"
 
+        if link_table:
+            for fk in foreign_keys:
+                relationshipsmodel_string += f"""\nclass {name}PublicWith{fk.split('_')[0].capitalize()}({name}Public):\n"""
+                relationshipsmodel_string += f"    {fk.split("_")[0]}s: Optional[List['{fk.split('_')[0].capitalize()}Public']] | None = None\n\n"
+                    
         self.logger.debug(f"{relationshipsmodel_string}")
 
         return f"""

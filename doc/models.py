@@ -30,11 +30,10 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
 class LocationBase(SQLModel):
     address: str = Field(primary_key = True)
     zipcode: int
-    neighborhood: str
     description: str
+    neighborhood: str
     latitude: float
     longitude: float
-    deployment_name: str | None = Field(foreign_key='deployment.name')
 
 class Location(LocationBase, TimestampMixin, table=True):
     deployments: list['Deployment'] | None = Relationship(back_populates='locations')
@@ -45,18 +44,17 @@ class LocationCreate(LocationBase):
 class LocationUpdate(LocationBase):
     address: str | None
     zipcode: int | None
-    neighborhood: str | None
     description: str | None
+    neighborhood: str | None
     latitude: float | None
     longitude: float | None
-    deployment_name: str | None
 
 class LocationPublic(LocationBase):
     created_at: datetime 
     updated_at: datetime
 
 class LocationPublicWithAll(LocationPublic):
-    deployments: Optional['DeploymentPublic'] | None = None
+    deployments: Optional[List['DeploymentPublic']] | None = None
 
     
 ## LinkDeploymentContact models
@@ -80,8 +78,16 @@ class LinkDeploymentContactPublic(LinkDeploymentContactBase):
     updated_at: datetime
 
 class LinkDeploymentContactPublicWithAll(LinkDeploymentContactPublic):
-    deployments: Optional['DeploymentPublic'] | None = None
-    contacts: Optional['ContactPublic'] | None = None
+    deployments: Optional[List['DeploymentPublic']] | None = None
+    contacts: Optional[List['ContactPublic']] | None = None
+
+class LinkDeploymentContactPublicWithDeployment(LinkDeploymentContactPublic):
+    deployments: Optional[List['DeploymentPublic']] | None = None
+
+
+class LinkDeploymentContactPublicWithContact(LinkDeploymentContactPublic):
+    contacts: Optional[List['ContactPublic']] | None = None
+
 
     
 ## Hotspot models
@@ -91,7 +97,6 @@ class HotspotBase(SQLModel):
     status: str
     ssid: str
     password: str
-    deployment_name: str | None = Field(foreign_key='deployment.name')
 
 class Hotspot(HotspotBase, TimestampMixin, table=True):
     deployments: list['Deployment'] | None = Relationship(back_populates='hotspots')
@@ -105,14 +110,13 @@ class HotspotUpdate(HotspotBase):
     status: str | None
     ssid: str | None
     password: str | None
-    deployment_name: str | None
 
 class HotspotPublic(HotspotBase):
     created_at: datetime 
     updated_at: datetime
 
 class HotspotPublicWithAll(HotspotPublic):
-    deployments: Optional['DeploymentPublic'] | None = None
+    deployments: Optional[List['DeploymentPublic']] | None = None
 
     
 ## Sensor models
@@ -140,6 +144,10 @@ class SensorPublic(SensorBase):
     created_at: datetime 
     updated_at: datetime
 
+class SensorPublicWithAll(SensorPublic):
+    registrations: Optional[List['RegistrationPublic']] | None = None
+    sensornotes: Optional[List['SensorNotePublic']] | None = None
+    deployments: Optional[List['DeploymentPublic']] | None = None
 
     
 ## Registration models
@@ -180,7 +188,7 @@ class RegistrationPublic(RegistrationBase):
     updated_at: datetime
 
 class RegistrationPublicWithAll(RegistrationPublic):
-    sensors: Optional['SensorPublic'] | None = None
+    sensors: Optional[List['SensorPublic']] | None = None
 
     
 ## SensorNote models
@@ -209,7 +217,7 @@ class SensorNotePublic(SensorNoteBase):
     updated_at: datetime
 
 class SensorNotePublicWithAll(SensorNotePublic):
-    sensors: Optional['SensorPublic'] | None = None
+    sensors: Optional[List['SensorPublic']] | None = None
 
     
 ## Contact models
@@ -217,7 +225,6 @@ class ContactBase(SQLModel):
     fullname: str = Field(primary_key = True)
     email: str | None
     phone: str | None
-    deployment_name: str | None
 
 class Contact(ContactBase, TimestampMixin, table=True):
     linkdeploymentcontacts: list['LinkDeploymentContact'] | None = Relationship(back_populates='contacts')
@@ -229,12 +236,13 @@ class ContactUpdate(ContactBase):
     fullname: str | None
     email: str | None
     phone: str | None
-    deployment_name: str | None
 
 class ContactPublic(ContactBase):
     created_at: datetime 
     updated_at: datetime
 
+class ContactPublicWithAll(ContactPublic):
+    linkdeploymentcontacts: Optional[List['LinkDeploymentContactPublicWithDeployment']] | None = None
 
     
 ## Deployment models
@@ -244,12 +252,14 @@ class DeploymentBase(SQLModel):
     sensor_index: int | None
     start_date: date | None
     end_date: date | None
+    location_address: str | None = Field(foreign_key='location.address')
+    hotspot_macaddr: str | None = Field(foreign_key='hotspot.macaddr')
 
 class Deployment(DeploymentBase, TimestampMixin, table=True):
-    locations: list['Location'] | None = Relationship(back_populates='deployments')
     linkdeploymentcontacts: list['LinkDeploymentContact'] | None = Relationship(back_populates='deployments')
-    hotspots: list['Hotspot'] | None = Relationship(back_populates='deployments')
     sensors: list['Sensor'] | None = Relationship(back_populates='deployments')
+    locations: list['Location'] | None = Relationship(back_populates='deployments')
+    hotspots: list['Hotspot'] | None = Relationship(back_populates='deployments')
 
 class DeploymentCreate(DeploymentBase):
     pass
@@ -260,15 +270,17 @@ class DeploymentUpdate(DeploymentBase):
     sensor_index: int | None
     start_date: date | None
     end_date: date | None
+    location_address: str | None
+    hotspot_macaddr: str | None
 
 class DeploymentPublic(DeploymentBase):
     created_at: datetime 
     updated_at: datetime
 
 class DeploymentPublicWithAll(DeploymentPublic):
-    sensors: Optional['SensorPublic'] | None = None
-    Locations: Optional['LocationPublic'] | None = None
-    LinkDeploymentContacts: Optional['LinkdeploymentcontactPublic'] | None = None
-    Hotspots: Optional['HotspotPublic'] | None = None
+    sensors: Optional[List['SensorPublic']] | None = None
+    locations: Optional[List['LocationPublic']] | None = None
+    hotspots: Optional[List['HotspotPublic']] | None = None
+    linkdeploymentcontacts: Optional[List['LinkDeploymentContactPublicWithContact']] | None = None
 
     

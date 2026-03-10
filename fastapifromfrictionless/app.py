@@ -97,7 +97,7 @@ def create_{name.lower()}(*, session: Session = Depends(get_session), {name.lowe
         pk = schema.primary_key[0]
 
         getall_string = f"""
-@app.get('/{name.lower()}/all', response_model=list[{f'{name}PublicWithAll' if len(foreign_keys)>0 else f'{name}Public'}])
+@app.get('/{name.lower()}/all', response_model=list[{f'{name}PublicWithAll' if ((len(foreign_keys)>0)|(len(relationships)>0)) else f'{name}Public'}])
 def read_{name.lower()}s(*, session: Session = Depends(get_session)):
     {name.lower()}s = session.exec(select({name})).all()
     return {name.lower()}s"""
@@ -113,7 +113,7 @@ async def query_{name.lower()}s(*, session: AsyncSession = Depends(get_session),
             query_string = ""
 
         get_string = f"""
-@app.get('/{name.lower()}/{{{name.lower()}_{pk}}}', response_model={f'{name}PublicWithAll' if len(foreign_keys)>0 else f'{name}Public'})
+@app.get('/{name.lower()}/{{{name.lower()}_{pk}}}', response_model={f'{name}PublicWithAll' if ((len(foreign_keys)>0)|(len(relationships)>0)) else f'{name}Public'})
 def read_{name.lower()}(*, session: Session = Depends(get_session), {name.lower()}_{pk}: str):
     {name.lower()} = session.get({name}, {name.lower()}_{pk})
     if not {name.lower()}:

@@ -24,9 +24,46 @@ def empty_excel(folder, filename):
             fields = schema.field_names
             logger.info(f"Creating table: {name} Fields: {fields}")
             df = pd.DataFrame(data=[], columns=fields)
-            df.set_index(schema.primary_key).to_excel(writer, sheet_name=name)
+            df.to_excel(writer, sheet_name=name, index=False)
         for sheet in writer.sheets:
             writer.sheets[sheet].autofit()
+
+def create_package(folder: str | os.PathLike, filename: str | os.PathLike):
+    import frictionless
+    import frictionless.formats
+    import os
+    from datetime import datetime
+
+    cwd = os.getcwd()
+
+    os.chdir(folder)
+    schemas = [x for x in os.listdir(os.getcwd()) if x.endswith('schema.yaml')]
+    resources=[]
+
+    for schema in schemas:
+        logger.info(f"appending {schema} to package")
+        schema_name = schema.replace('.schema.yaml', "")
+        resource = frictionless.Resource(name=schema_name, 
+                                        path=filename,
+                                        control=frictionless.formats.ExcelControl(sheet=schema_name),
+                                        schema=f'{schema}')
+        
+        resources.append(resource)
+
+    logger.debug(f"Building package.")
+    package = frictionless.Package(
+        name=filename.split('.')[0],
+        resources=resources,
+        version='0.0.1',
+        created=datetime.now().isoformat()
+    )
+
+    logger.info(f"Saving package to {folder}/{filename.split('.')[0]+'.package.yaml'}")
+    package.to_yaml(filename.split('.')[0]+'.package.yaml')
+
+    os.chdir(cwd)
+
+    return package
 
 def get_model(name: str, type: str):
     import models
@@ -123,9 +160,11 @@ def update_api_from_package(api_url, package_file):
         unchanged_rows = []
 
         # Open resource and stream rows
-        resource.open()
+        if resource.closed:
+            resource.open()
         for row in resource.row_stream:
-            row_pk = [x for x in row.values()][0]     # the first row value (primary key)       
+            row_pk = [x for x in row.values()][0]     # the first row value (primary key)     
+            logger.debug(f"row: {row}")  
             if row_pk == None:
                 break         
             # Convert that row into a model

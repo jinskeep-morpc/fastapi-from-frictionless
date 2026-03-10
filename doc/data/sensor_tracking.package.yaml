@@ -1,0 +1,84 @@
+name: sensor_tracking
+version: 0.0.1
+created: '2026-03-10T14:52:41.184355'
+resources:
+  - name: location
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      excel:
+        sheet: location
+    schema: location.schema.yaml
+  - name: link-deployment-contact
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      excel:
+        sheet: link-deployment-contact
+    schema: link-deployment-contact.schema.yaml
+  - name: hotspot
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      excel:
+        sheet: hotspot
+    schema: hotspot.schema.yaml
+  - name: sensor
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      excel:
+        sheet: sensor
+    schema: sensor.schema.yaml
+  - name: registration
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      excel:
+        sheet: registration
+    schema: registration.schema.yaml
+  - name: sensor-note
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      excel:
+        sheet: sensor-note
+    schema: sensor-note.schema.yaml
+  - name: contact
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      excel:
+        sheet: contact
+    schema: contact.schema.yaml
+  - name: deployment
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      excel:
+        sheet: deployment
+    schema: deployment.schema.yaml

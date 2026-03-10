@@ -7,11 +7,11 @@ fields:
     type: integer
     constraints:
       required: true
-  - name: neighborhood
+  - name: description
     type: string
     constraints:
       required: true
-  - name: description
+  - name: neighborhood
     type: string
     constraints:
       required: true
@@ -23,14 +23,5 @@ fields:
     type: number
     constraints:
       required: true
-  - name: deployment_name
-    type: string
 primaryKey:
   - address
-foreignKeys:
-  - fields:
-      - deployment_name
-    reference:
-      resource: deployment
-      fields:
-        - name

@@ -47,10 +47,6 @@ def read_location(*, session: Session = Depends(get_session), location_address: 
         raise HTTPException(status_code=404, detail='Location not found.')
     return location
         
-@app.get('/location/query', response_model=list[LocationPublicWithAll])
-async def query_locations(*, session: AsyncSession = Depends(get_session), query=QueryBuilder(Location)):
-    locations = session.execute(query)
-    return locations.scalars().all()
         
 @app.patch('/location/{location_address}', response_model=LocationPublic)
 def update_location(*, session: Session = Depends(get_session), location_address: str, location: LocationUpdate):
@@ -143,10 +139,6 @@ def read_hotspot(*, session: Session = Depends(get_session), hotspot_macaddr: st
         raise HTTPException(status_code=404, detail='Hotspot not found.')
     return hotspot
         
-@app.get('/hotspot/query', response_model=list[HotspotPublicWithAll])
-async def query_hotspots(*, session: AsyncSession = Depends(get_session), query=QueryBuilder(Hotspot)):
-    hotspots = session.execute(query)
-    return hotspots.scalars().all()
         
 @app.patch('/hotspot/{hotspot_macaddr}', response_model=HotspotPublic)
 def update_hotspot(*, session: Session = Depends(get_session), hotspot_macaddr: str, hotspot: HotspotUpdate):
@@ -179,12 +171,12 @@ def create_sensor(*, session: Session = Depends(get_session), sensor: SensorCrea
     session.refresh(sensor)
     return sensor
         
-@app.get('/sensor/all', response_model=list[SensorPublic])
+@app.get('/sensor/all', response_model=list[SensorPublicWithAll])
 def read_sensors(*, session: Session = Depends(get_session)):
     sensors = session.exec(select(Sensor)).all()
     return sensors
         
-@app.get('/sensor/{sensor_macaddr}', response_model=SensorPublic)
+@app.get('/sensor/{sensor_macaddr}', response_model=SensorPublicWithAll)
 def read_sensor(*, session: Session = Depends(get_session), sensor_macaddr: str):
     sensor = session.get(Sensor, sensor_macaddr)
     if not sensor:
@@ -319,12 +311,12 @@ def create_contact(*, session: Session = Depends(get_session), contact: ContactC
     session.refresh(contact)
     return contact
         
-@app.get('/contact/all', response_model=list[ContactPublic])
+@app.get('/contact/all', response_model=list[ContactPublicWithAll])
 def read_contacts(*, session: Session = Depends(get_session)):
     contacts = session.exec(select(Contact)).all()
     return contacts
         
-@app.get('/contact/{contact_fullname}', response_model=ContactPublic)
+@app.get('/contact/{contact_fullname}', response_model=ContactPublicWithAll)
 def read_contact(*, session: Session = Depends(get_session), contact_fullname: str):
     contact = session.get(Contact, contact_fullname)
     if not contact:

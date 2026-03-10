@@ -13,6 +13,10 @@ fields:
     type: date
   - name: end_date
     type: date
+  - name: location_address
+    type: string
+  - name: hotspot_macaddr
+    type: string
 primaryKey:
   - name
 foreignKeys:
@@ -22,3 +26,15 @@ foreignKeys:
       resource: sensor
       fields:
         - name
+  - fields:
+      - location_address
+    reference:
+      resource: location
+      fields:
+        - address
+  - fields:
+      - hotspot_macaddr
+    reference:
+      resource: hotspot
+      fields:
+        - macaddr

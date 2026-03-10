@@ -6,18 +6,18 @@ logger = logging.getLogger(__name__)
 
 class database():
     _database_logger = logging.getLogger(__name__).getChild(__qualname__)
-    def __init__(self, db_filename):
+    def __init__(self, folder):
 
-        self.logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(db_filename)
+        self.folder = folder
+        self.logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(folder)
 
-        self.logger.info(f"Building database from schema {db_filename}")
-        self.database = self.build(filepath=db_filename)
+        self.logger.info(f"Building database from schemas in folder {folder}")
 
-    def build(self, filepath: str | PathLike):
-        database_string = f"""
+    def build(self, db_filepath: str | PathLike):
+        self.database = f"""
 from sqlmodel import SQLModel, create_engine
 
-sqlite_filename = '{filepath}'
+sqlite_filename = '{db_filepath}'
 sqlite_url = f"sqlite:///{{sqlite_filename}}"
 
 connect_args = {{'check_same_thread': False}}
@@ -26,7 +26,7 @@ engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 """
-        return database_string
+        return self
 
     def save(self, filepath: str | PathLike):
 
