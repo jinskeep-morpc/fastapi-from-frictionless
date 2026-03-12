@@ -12,24 +12,24 @@ Roadmap:
 - [x] From a [frictionless data package](https://datapackage.org/standard/data-package/) create [SQLmodels](https://sqlmodel.tiangolo.com/tutorial/code-structure/#hero-model-file) for each resource with sane defaults.
 - [x] Create a [FastAPI](https://fastapi.tiangolo.com/tutorial/bigger-applications/) router for each model with all basic CRUD.
 - [x] Implement [Fast API query builder](https://github.com/bhadri01/fastapi-querybuilder) for automatic query capabilities based on models.
-- [ ] Create workflow for ingesting and exporting data using excel workbook as interface.
+- [x] Create workflow for ingesting and exporting data using excel workbook as interface.
 - [ ] Optional: Implement [security measures](https://fastapi.tiangolo.com/tutorial/security/first-steps/) using headers 
 - [ ] Optional: Create front-end that is a form and auto-populates fields. 
 - [ ] Optional: Drawio ERD to frictionless
 
 ## Frictionless to SQLmodel
 
-- [ ] Create template for BaseModel for table from frictionless fields.
-- [ ] Create TableModel with auto-incrementing id and created_at and updated_at fields
-- [ ] Create Response models
-    - [ ] CreateModel
-    - [ ] PublicModel
-    - [ ] PublicWithRelationshipsModel
-    - [ ] UpdateModel
+- [x] Create template for BaseModel for table from frictionless fields.
+- [x] Create TableModel with auto-incrementing id and created_at and updated_at fields
+- [x] Create Response models
+    - [x] CreateModel
+    - [x] PublicModel
+    - [x] PublicWithRelationshipsModel
+    - [x] UpdateModel
 
 ## Create basic CRUD FastAPI router for each model
 
-- [ ] Build template routers for each desired endpoint
+- [x] Build template routers for each desired endpoint
     - [ ] create
     - [ ] read_all
     - [ ] read_single
@@ -41,14 +41,14 @@ Roadmap:
 
 ## Implement Query Builder
 
-- [ ] Add template for query route
-- [ ] Designate in frictionless resource if it should be implemented
+- [x] Add template for query route
+- [x] Designate in frictionless resource if it should be implemented - NOTE: This is based on foreign key designation
 - [ ] Optional: default routes for standard queries based on frictionless schema.
 
 ## Create workflow for excel interface
 
-- [ ] Create empty excel workbook from data package
-- [ ] Write python to update/create entries based on excel workbook
+- [x] Create empty excel workbook from data package
+- [x] Write python to update/create entries based on excel workbook
 - [ ] Write python to dump all data to excel
 - [ ] Optional: Create default router for GET/POST file
 
