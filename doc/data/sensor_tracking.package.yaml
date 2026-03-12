@@ -1,6 +1,6 @@
 name: sensor_tracking
 version: 0.0.1
-created: '2026-03-10T14:52:41.184355'
+created: '2026-03-12T13:20:32.029306'
 resources:
   - name: location
     type: table
@@ -9,19 +9,10 @@ resources:
     format: xlsx
     mediatype: application/vnd.ms-excel
     dialect:
+      skipBlankRows: true
       excel:
         sheet: location
     schema: location.schema.yaml
-  - name: link-deployment-contact
-    type: table
-    path: sensor_tracking.xlsx
-    scheme: file
-    format: xlsx
-    mediatype: application/vnd.ms-excel
-    dialect:
-      excel:
-        sheet: link-deployment-contact
-    schema: link-deployment-contact.schema.yaml
   - name: hotspot
     type: table
     path: sensor_tracking.xlsx
@@ -29,6 +20,7 @@ resources:
     format: xlsx
     mediatype: application/vnd.ms-excel
     dialect:
+      skipBlankRows: true
       excel:
         sheet: hotspot
     schema: hotspot.schema.yaml
@@ -39,6 +31,7 @@ resources:
     format: xlsx
     mediatype: application/vnd.ms-excel
     dialect:
+      skipBlankRows: true
       excel:
         sheet: sensor
     schema: sensor.schema.yaml
@@ -49,9 +42,21 @@ resources:
     format: xlsx
     mediatype: application/vnd.ms-excel
     dialect:
+      skipBlankRows: true
       excel:
         sheet: registration
     schema: registration.schema.yaml
+  - name: deployment-note
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      skipBlankRows: true
+      excel:
+        sheet: deployment-note
+    schema: deployment-note.schema.yaml
   - name: sensor-note
     type: table
     path: sensor_tracking.xlsx
@@ -59,6 +64,7 @@ resources:
     format: xlsx
     mediatype: application/vnd.ms-excel
     dialect:
+      skipBlankRows: true
       excel:
         sheet: sensor-note
     schema: sensor-note.schema.yaml
@@ -69,6 +75,7 @@ resources:
     format: xlsx
     mediatype: application/vnd.ms-excel
     dialect:
+      skipBlankRows: true
       excel:
         sheet: contact
     schema: contact.schema.yaml
@@ -79,6 +86,7 @@ resources:
     format: xlsx
     mediatype: application/vnd.ms-excel
     dialect:
+      skipBlankRows: true
       excel:
         sheet: deployment
     schema: deployment.schema.yaml

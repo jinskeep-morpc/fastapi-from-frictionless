@@ -70,54 +70,6 @@ def delete_location(*, session: Session = Depends(get_session), location_address
     return {'ok': True}
         
         
-# LinkDeploymentContact requests
-@app.post('/linkdeploymentcontact', response_model=LinkDeploymentContactPublic)
-def create_linkdeploymentcontact(*, session: Session = Depends(get_session), linkdeploymentcontact: LinkDeploymentContactCreate):
-    linkdeploymentcontact = LinkDeploymentContact.model_validate(linkdeploymentcontact)
-    session.add(linkdeploymentcontact)
-    session.commit()
-    session.refresh(linkdeploymentcontact)
-    return linkdeploymentcontact
-        
-@app.get('/linkdeploymentcontact/all', response_model=list[LinkDeploymentContactPublicWithAll])
-def read_linkdeploymentcontacts(*, session: Session = Depends(get_session)):
-    linkdeploymentcontacts = session.exec(select(LinkDeploymentContact)).all()
-    return linkdeploymentcontacts
-        
-@app.get('/linkdeploymentcontact/{linkdeploymentcontact_deployment_name}', response_model=LinkDeploymentContactPublicWithAll)
-def read_linkdeploymentcontact(*, session: Session = Depends(get_session), linkdeploymentcontact_deployment_name: str):
-    linkdeploymentcontact = session.get(LinkDeploymentContact, linkdeploymentcontact_deployment_name)
-    if not linkdeploymentcontact:
-        raise HTTPException(status_code=404, detail='LinkDeploymentContact not found.')
-    return linkdeploymentcontact
-        
-@app.get('/linkdeploymentcontact/query', response_model=list[LinkDeploymentContactPublicWithAll])
-async def query_linkdeploymentcontacts(*, session: AsyncSession = Depends(get_session), query=QueryBuilder(LinkDeploymentContact)):
-    linkdeploymentcontacts = session.execute(query)
-    return linkdeploymentcontacts.scalars().all()
-        
-@app.patch('/linkdeploymentcontact/{linkdeploymentcontact_deployment_name}', response_model=LinkDeploymentContactPublic)
-def update_linkdeploymentcontact(*, session: Session = Depends(get_session), linkdeploymentcontact_deployment_name: str, linkdeploymentcontact: LinkDeploymentContactUpdate):
-    db_linkdeploymentcontact = session.get(LinkDeploymentContact, linkdeploymentcontact_deployment_name)
-    if not db_linkdeploymentcontact:
-        raise HTTPException(status_code=404, detail=f'LinkDeploymentContact {linkdeploymentcontact_deployment_name} not found.')
-    linkdeploymentcontact_data = linkdeploymentcontact.model_dump(exclude_unset=True)
-    db_linkdeploymentcontact.sqlmodel_update(linkdeploymentcontact_data)
-    session.add(db_linkdeploymentcontact)
-    session.commit()
-    session.refresh(db_linkdeploymentcontact)
-    return db_linkdeploymentcontact
-        
-@app.delete('/linkdeploymentcontact/{linkdeploymentcontact_deployment_name}')
-def delete_linkdeploymentcontact(*, session: Session = Depends(get_session), linkdeploymentcontact_deployment_name: str):
-    linkdeploymentcontact = session.get(LinkDeploymentContact, linkdeploymentcontact_deployment_name)
-    if not linkdeploymentcontact:
-        raise HTTPException(status_code=404, detail=f'LinkDeploymentContact {linkdeploymentcontact_deployment_name} not found.')
-    session.delete(linkdeploymentcontact)
-    session.commit()
-    return {'ok': True}
-        
-        
 # Hotspot requests
 @app.post('/hotspot', response_model=HotspotPublic)
 def create_hotspot(*, session: Session = Depends(get_session), hotspot: HotspotCreate):
@@ -250,6 +202,54 @@ def delete_registration(*, session: Session = Depends(get_session), registration
     if not registration:
         raise HTTPException(status_code=404, detail=f'Registration {registration_id} not found.')
     session.delete(registration)
+    session.commit()
+    return {'ok': True}
+        
+        
+# DeploymentNote requests
+@app.post('/deploymentnote', response_model=DeploymentNotePublic)
+def create_deploymentnote(*, session: Session = Depends(get_session), deploymentnote: DeploymentNoteCreate):
+    deploymentnote = DeploymentNote.model_validate(deploymentnote)
+    session.add(deploymentnote)
+    session.commit()
+    session.refresh(deploymentnote)
+    return deploymentnote
+        
+@app.get('/deploymentnote/all', response_model=list[DeploymentNotePublicWithAll])
+def read_deploymentnotes(*, session: Session = Depends(get_session)):
+    deploymentnotes = session.exec(select(DeploymentNote)).all()
+    return deploymentnotes
+        
+@app.get('/deploymentnote/{deploymentnote_id}', response_model=DeploymentNotePublicWithAll)
+def read_deploymentnote(*, session: Session = Depends(get_session), deploymentnote_id: str):
+    deploymentnote = session.get(DeploymentNote, deploymentnote_id)
+    if not deploymentnote:
+        raise HTTPException(status_code=404, detail='DeploymentNote not found.')
+    return deploymentnote
+        
+@app.get('/deploymentnote/query', response_model=list[DeploymentNotePublicWithAll])
+async def query_deploymentnotes(*, session: AsyncSession = Depends(get_session), query=QueryBuilder(DeploymentNote)):
+    deploymentnotes = session.execute(query)
+    return deploymentnotes.scalars().all()
+        
+@app.patch('/deploymentnote/{deploymentnote_id}', response_model=DeploymentNotePublic)
+def update_deploymentnote(*, session: Session = Depends(get_session), deploymentnote_id: str, deploymentnote: DeploymentNoteUpdate):
+    db_deploymentnote = session.get(DeploymentNote, deploymentnote_id)
+    if not db_deploymentnote:
+        raise HTTPException(status_code=404, detail=f'DeploymentNote {deploymentnote_id} not found.')
+    deploymentnote_data = deploymentnote.model_dump(exclude_unset=True)
+    db_deploymentnote.sqlmodel_update(deploymentnote_data)
+    session.add(db_deploymentnote)
+    session.commit()
+    session.refresh(db_deploymentnote)
+    return db_deploymentnote
+        
+@app.delete('/deploymentnote/{deploymentnote_id}')
+def delete_deploymentnote(*, session: Session = Depends(get_session), deploymentnote_id: str):
+    deploymentnote = session.get(DeploymentNote, deploymentnote_id)
+    if not deploymentnote:
+        raise HTTPException(status_code=404, detail=f'DeploymentNote {deploymentnote_id} not found.')
+    session.delete(deploymentnote)
     session.commit()
     return {'ok': True}
         

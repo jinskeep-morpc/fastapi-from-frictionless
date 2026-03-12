@@ -275,18 +275,18 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
         if (len(foreign_keys) > 0) | (len(relationships) > 0):
             relationshipsmodel_string += f"""class {name}PublicWithAll({name}Public):\n"""
             for fk in foreign_keys:
-                relationshipsmodel_string += f"    {fk.split("_")[0]}s: Optional[List['{fk.split('_')[0].capitalize()}Public']] | None = None\n"
+                relationshipsmodel_string += f"    {fk.split("_")[0]}s: List['{fk.split('_')[0].capitalize()}Public'] | None = None\n"
             for relationship in relationships:
                 if relationship.startswith('Link'):
                     joined = relationship.replace('Link', "").replace(name, "").replace('-', "")
-                    relationshipsmodel_string += f"    {relationship.lower()}s: Optional[List['{relationship}PublicWith{joined}']] | None = None\n"
+                    relationshipsmodel_string += f"    {relationship.lower()}s: List['{relationship}PublicWith{joined}'] | None = None\n"
                 else:
-                    relationshipsmodel_string += f"    {relationship.lower()}s: Optional[List['{relationship}Public']] | None = None\n"
+                    relationshipsmodel_string += f"    {relationship.lower()}s: List['{relationship}Public'] | None = None\n"
 
         if link_table:
             for fk in foreign_keys:
                 relationshipsmodel_string += f"""\nclass {name}PublicWith{fk.split('_')[0].capitalize()}({name}Public):\n"""
-                relationshipsmodel_string += f"    {fk.split("_")[0]}s: Optional[List['{fk.split('_')[0].capitalize()}Public']] | None = None\n\n"
+                relationshipsmodel_string += f"    {fk.split("_")[0]}s: List['{fk.split('_')[0].capitalize()}Public'] | None = None\n\n"
                     
         self.logger.debug(f"{relationshipsmodel_string}")
 

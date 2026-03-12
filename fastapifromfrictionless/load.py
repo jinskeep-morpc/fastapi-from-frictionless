@@ -1,5 +1,6 @@
 import logging
 
+from frictionless import Dialect
 from pydantic import ValidationError
 from requests import HTTPError
 
@@ -46,7 +47,8 @@ def create_package(folder: str | os.PathLike, filename: str | os.PathLike):
         resource = frictionless.Resource(name=schema_name, 
                                         path=filename,
                                         control=frictionless.formats.ExcelControl(sheet=schema_name),
-                                        schema=f'{schema}')
+                                        schema=f'{schema}',
+                                        dialect=Dialect(skip_blank_rows=True))
         
         resources.append(resource)
 
