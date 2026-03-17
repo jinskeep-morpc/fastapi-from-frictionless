@@ -1,14 +1,38 @@
 import logging
+import pathlib
 
 from frictionless import Dialect
 from pydantic import ValidationError
 from requests import HTTPError
+
 
 logger = logging.getLogger(__name__)
 
 import os
 import fastapi
 import pandas as pd
+
+def build_database(schema_folder, db_filename):
+    """
+    Builds model.py, app.py, database.py, and __init__.py files to start a FastAPI instance based on frictionless schemas.
+
+    Parameters
+    ----------
+    schema_folder : str
+        The location of the schemas
+    db_filename : str
+        The name of the database. 
+    """
+
+    from fastapifromfrictionless import models, app, database
+
+    models(schema_folder).build().save('models.py')
+
+    app(schema_folder).build().save('app.py')
+
+    database(schema_folder).build(db_filename).save('database.py')
+
+    open('__init__.py', 'w').close()
 
 def empty_excel(folder, filename):
     import frictionless
