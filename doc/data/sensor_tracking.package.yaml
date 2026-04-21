@@ -1,0 +1,92 @@
+name: sensor_tracking
+version: 0.0.1
+created: '2026-03-12T13:20:32.029306'
+resources:
+  - name: location
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      skipBlankRows: true
+      excel:
+        sheet: location
+    schema: location.schema.yaml
+  - name: hotspot
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      skipBlankRows: true
+      excel:
+        sheet: hotspot
+    schema: hotspot.schema.yaml
+  - name: sensor
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      skipBlankRows: true
+      excel:
+        sheet: sensor
+    schema: sensor.schema.yaml
+  - name: registration
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      skipBlankRows: true
+      excel:
+        sheet: registration
+    schema: registration.schema.yaml
+  - name: deployment-note
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      skipBlankRows: true
+      excel:
+        sheet: deployment-note
+    schema: deployment-note.schema.yaml
+  - name: sensor-note
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      skipBlankRows: true
+      excel:
+        sheet: sensor-note
+    schema: sensor-note.schema.yaml
+  - name: contact
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      skipBlankRows: true
+      excel:
+        sheet: contact
+    schema: contact.schema.yaml
+  - name: deployment
+    type: table
+    path: sensor_tracking.xlsx
+    scheme: file
+    format: xlsx
+    mediatype: application/vnd.ms-excel
+    dialect:
+      skipBlankRows: true
+      excel:
+        sheet: deployment
+    schema: deployment.schema.yaml

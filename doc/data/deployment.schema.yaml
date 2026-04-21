@@ -15,13 +15,19 @@ fields:
     type: date
   - name: location_address
     type: string
-  - name: hotspot_macaddr
-    type: string
   - name: contact_fullname
+    type: string
+  - name: hotspot_macaddr
     type: string
 primaryKey:
   - name
 foreignKeys:
+  - fields:
+      - sensor_name
+    reference:
+      resource: sensor
+      fields:
+        - name
   - fields:
       - location_address
     reference:
@@ -29,20 +35,14 @@ foreignKeys:
       fields:
         - address
   - fields:
-      - contact_fullname
-    reference:
-      resource: contact
-      fields:
-        - fullname
-  - fields:
       - hotspot_macaddr
     reference:
       resource: hotspot
       fields:
         - macaddr
   - fields:
-      - sensor_name
+      - contact_fullname
     reference:
-      resource: sensor
+      resource: contact
       fields:
-        - name
+        - fullname

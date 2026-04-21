@@ -7,11 +7,11 @@ fields:
     type: integer
     constraints:
       required: true
-  - name: neighborhood
+  - name: description
     type: string
     constraints:
       required: true
-  - name: description
+  - name: neighborhood
     type: string
     constraints:
       required: true

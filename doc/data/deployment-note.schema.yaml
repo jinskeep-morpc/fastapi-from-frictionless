@@ -1,23 +1,30 @@
 fields:
-  - name: macaddr
+  - name: id
+    type: integer
+    constraints:
+      required: true
+  - name: deployment_name
     type: string
     constraints:
       required: true
-  - name: serialnum
+  - name: date
+    type: date
+    constraints:
+      required: true
+  - name: author
     type: string
     constraints:
       required: true
-  - name: status
-    type: string
-    constraints:
-      required: true
-  - name: ssid
-    type: string
-    constraints:
-      required: true
-  - name: password
+  - name: note
     type: string
     constraints:
       required: true
 primaryKey:
-  - macaddr
+  - id
+foreignKeys:
+  - fields:
+      - deployment_name
+    reference:
+      resource: deployment
+      fields:
+        - name
