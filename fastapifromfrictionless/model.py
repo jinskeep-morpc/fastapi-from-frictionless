@@ -10,7 +10,7 @@ from os import PathLike
 type_map = {
     "string": {
         "default": "str",
-        "email": "EmailStr",
+        "email": "str",
         "uri": "AnyUrl",
         "binary": "bytes",
         "uuid": "UUID"
