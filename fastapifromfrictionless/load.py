@@ -1,9 +1,12 @@
 import logging
 import pathlib
+import stat
 
-from frictionless import Dialect
+from frictionless import Dialect, Validator
+import frictionless.errors
+import frictionless.errors
 from pydantic import ValidationError
-from requests import HTTPError
+from requests import HTTPError, JSONDecodeError, Session
 
 
 logger = logging.getLogger(__name__)
@@ -34,18 +37,18 @@ def build_database(schema_folder, db_filename):
 
     open('__init__.py', 'w').close()
 
-def empty_excel(folder, filename):
+def empty_excel(schema_folder, output_filepath):
     import frictionless
     import pandas as pd
     import os
 
-    schemas = [file for file in os.listdir(folder) if file.endswith('schema.yaml')]
+    schemas = [file for file in os.listdir(schema_folder) if file.endswith('schema.yaml')]
 
-    with pd.ExcelWriter(filename) as writer:
-        logger.info(f"Writing empty excel file ({filename}) based on schemas as {folder}.")
+    with pd.ExcelWriter(output_filepath) as writer:
+        logger.info(f"Writing empty excel file ({output_filepath}) based on schemas in {schema_folder}.")
         for schema in schemas:
             name = schema.replace('.schema.yaml', '')
-            schema = frictionless.Schema(os.path.join(folder, schema))
+            schema = frictionless.Schema(os.path.join(schema_folder, schema))
             fields = schema.field_names
             logger.info(f"Creating table: {name} Fields: {fields}")
             df = pd.DataFrame(data=[], columns=fields)
@@ -53,42 +56,53 @@ def empty_excel(folder, filename):
         for sheet in writer.sheets:
             writer.sheets[sheet].autofit()
 
-def create_package(folder: str | os.PathLike, filename: str | os.PathLike):
+def create_package(folder: str | os.PathLike, filename: str | os.PathLike, validate: bool = True):
     import frictionless
-    import frictionless.formats
+    from frictionless.formats import ExcelControl
     import os
     from datetime import datetime
+    from frictionless.resources import TableResource
+    from frictionless.dialect.dialect import Dialect
+    from contextlib import chdir
 
-    cwd = os.getcwd()
+    with chdir(folder):
+        schemas = [x for x in os.listdir(os.getcwd()) if x.endswith('schema.yaml')]
+        resources=[]
 
-    os.chdir(folder)
-    schemas = [x for x in os.listdir(os.getcwd()) if x.endswith('schema.yaml')]
-    resources=[]
+        for schema in schemas:
+            logger.info(f"appending {schema} to package")
+            schema_name = schema.replace('.schema.yaml', "")
+            resource = TableResource(
+                name=schema_name, 
+                path=filename,
+                control=ExcelControl(sheet=schema_name),
+                schema=(frictionless.Schema.from_descriptor(schema)),
+                dialect=Dialect(skip_blank_rows=True),
+                )
+            resource.infer(stats=True)
+            
+            resources.append(resource)
 
-    for schema in schemas:
-        logger.info(f"appending {schema} to package")
-        schema_name = schema.replace('.schema.yaml', "")
-        resource = frictionless.Resource(name=schema_name, 
-                                        path=filename,
-                                        control=frictionless.formats.ExcelControl(sheet=schema_name),
-                                        schema=f'{schema}',
-                                        dialect=Dialect(skip_blank_rows=True))
+
+        logger.debug(f"Building package.")
+        package = frictionless.Package(
+            name=filename.split('.')[0],
+            resources=resources,
+            version='0.0.1',
+            created=datetime.now().isoformat()
+        )
+
+        logger.info(f"Saving package to {folder}/{filename.split('.')[0]+'.package.yaml'}")
+        package.to_yaml(filename.split('.')[0]+'.package.yaml')
+
+        if validate == True:
+            valid = package.validate()
+            if valid.valid == True:
+                logger.info(f"{filename.split('.')[0]+'.package.yaml'} is a valid package.")
+            else:
+                logger.error(f"{filename.split('.')[0]+'.package.yaml'} is an invalid package. Report below:\n{valid}")
+                raise RuntimeError
         
-        resources.append(resource)
-
-    logger.debug(f"Building package.")
-    package = frictionless.Package(
-        name=filename.split('.')[0],
-        resources=resources,
-        version='0.0.1',
-        created=datetime.now().isoformat()
-    )
-
-    logger.info(f"Saving package to {folder}/{filename.split('.')[0]+'.package.yaml'}")
-    package.to_yaml(filename.split('.')[0]+'.package.yaml')
-
-    os.chdir(cwd)
-
     return package
 
 def get_model(name: str, type: str):
@@ -107,13 +121,15 @@ def get_model(name: str, type: str):
         logger.error(f"No models for {name}.")
         raise ValueError
         
-def requests_post(server_url: str | os.PathLike, endpoint: str, model) -> pd.DataFrame:
+def requests_post(session: Session | None, server_url: str | os.PathLike, endpoint: str, model) -> pd.DataFrame:
     import os
     import requests
     import pandas as pd
 
+    if session == None:
+        session = requests.Session()
     logger.debug(f"Posting {model.model_dump_json()} to {server_url}/{endpoint}.")
-    r = requests.post(f'{os.path.join(server_url, endpoint)}', data=model.model_dump_json())
+    r = session.post(f'{os.path.join(server_url, endpoint)}', data=model.model_dump_json())
     logger.debug(f"{r.content}")
     r.raise_for_status()
     json = r.json()
@@ -121,49 +137,69 @@ def requests_post(server_url: str | os.PathLike, endpoint: str, model) -> pd.Dat
 
     return json
 
-def requests_get_all(server_url: str | os.PathLike, endpoint: str) -> pd.DataFrame:
+def requests_get_all(session: Session | None, server_url: str | os.PathLike, endpoint: str) -> pd.DataFrame:
     import os
     import requests
     import pandas as pd
 
+    if session == None:
+        session = requests.Session()
     url = f'{os.path.join(server_url, endpoint, 'all')}'
     logger.debug(f"Getting all from at {url}")
-    r = requests.get(url)
-    r.raise_for_status()
-    json = r.json()
+    try:
+        r = session.get(url)
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"HTTP Error: {e}")
+    except Exception as e:
+        logger.error(f"Other Error: {e}")
+    else:
+        try:
+            json = r.json()
+        except requests.exceptions.JSONDecodeError as e:
+            logger.error(f"Json Decoder Error: {e}")
+
     r.close()
 
     return pd.DataFrame.from_dict(json)
 
-def requests_update(server_url: str | os.PathLike, endpoint: str, pk, model) -> pd.DataFrame:
+def requests_update(session: Session | None, server_url: str | os.PathLike, endpoint: str, pk, model) -> pd.DataFrame:
     import os
     import requests
     import pandas as pd
 
+    if session == None:
+        session = requests.Session()
     logger.debug(f"Updating {pk} at {server_url}/{endpoint} to {model.model_dump_json()}")
-    r = requests.patch(f'{os.path.join(server_url, endpoint, pk)}', data=model.model_dump_json())
+    r = session.patch(f'{os.path.join(server_url, endpoint, pk)}', data=model.model_dump_json())
     r.raise_for_status()
     json = r.json()
     r.close()
 
     return json
 
-def update_api_from_package(api_url, package_file):
+def update_api_from_package(api_url, package_file, skip=[]):
     import pandas as pd
     import frictionless
+    from requests import Session
 
     # Load sheet names
     resources = frictionless.Package(package_file).resources
+    version = frictionless.Package.version
     resource_names = [x.name for x in resources]
     logger.info(f"Updating data from {package_file} for {resource_names}")
 
+    session = Session()
+
     # For each sheet..
     for resource in resources:
+        if resource.name in skip:
+            continue
         table_name = resource.name.replace('-','').lower()
         # Get current state of data on api
         logger.info(f"Getting all data for {table_name}")
         try:
-            current_all = requests_get_all(server_url=api_url, endpoint=table_name)
+            current_all = requests_get_all(session, server_url=api_url, endpoint=table_name)
         except fastapi.exceptions.RequestValidationError as e:
             logger.error(f"{resource} not valid table at {api_url}")
             raise fastapi.exceptions.RequestValidationError(e)
@@ -186,51 +222,49 @@ def update_api_from_package(api_url, package_file):
         unchanged_rows = []
 
         # Open resource and stream rows
-        if resource.closed:
-            resource.open()
-        for row in resource.row_stream:
-            row_pk = [x for x in row.values()][0]     # the first row value (primary key)     
-            logger.debug(f"row: {row}")  
-            if row_pk == None:
-                break         
-            # Convert that row into a model
-            modelcreate = get_model(table_name, 'create')  # fetch the model 
-            try:
-                model = modelcreate(**row)                # create model
-            except ValidationError as e:
-                logger.error(f"Invalid value in row {row_pk}: {e}")
-                raise ValidationError
+        with resource as resource:
+            for row in resource.row_stream:
+                row_pk = [x for x in row.values()][0]     # the first row value (primary key)     
+                logger.debug(f"row: {row}")  
+                if row_pk == None:
+                    break         
+                # Convert that row into a model
+                modelcreate = get_model(table_name, 'create')  # fetch the model 
+                try:
+                    model = modelcreate(**row)                # create model
+                except ValidationError as e:
+                    logger.error(f"Invalid value in row {row_pk}: {e}")
+                    raise ValidationError
 
-            # Check if the row exists in the current api table
-            if row_pk not in current_index:
-                # if not, post to api
-                logger.debug(f"Posting row: {row}")
-                response = requests_post(server_url=api_url, endpoint=table_name, model=model)
-                loaded_rows.append(row_pk)
+                # Check if the row exists in the current api table
+                if row_pk not in current_index:
+                    # if not, post to api
+                    logger.debug(f"Posting row: {row}")
+                    response = requests_post(session, server_url=api_url, endpoint=table_name, model=model)
+                    loaded_rows.append(row_pk)
 
-            if row_pk in current_index:
-                # if it is, check if it is the same
-                current_row = current_all.loc[current_all[current_all.columns[0]]==row_pk]
-                current_row = current_row.loc[[x for x in current_row.index][0]].to_dict()
+                if row_pk in current_index:
+                    # if it is, check if it is the same
+                    current_row = current_all.loc[current_all[current_all.columns[0]]==row_pk]
+                    current_row = current_row.loc[[x for x in current_row.index][0]].to_dict()
 
-                for k,v in row.items():
-                    changed = False
-                    if current_row[k] == v:
-                        continue
+                    for k,v in row.items():
+                        changed = False
+                        if current_row[k] == v:
+                            continue
+                        else:
+                            changed = True
+
+                    # if it is changed, update.
+                    if changed:
+                        logger.debug(f'{row_pk} in database but changed. Updating...')
+                        modelupdate = get_model(table_name, 'update')
+                        model = modelupdate(**row)
+                        response = requests_update(session, server_url=api_url, endpoint=table_name, pk=row_pk, model=model)
+                        updated_rows.append(row_pk)
                     else:
-                        changed = True
-
-                # if it is changed, update.
-                if changed:
-                    logger.debug(f'{row_pk} in database but changed. Updating...')
-                    modelupdate = get_model(table_name, 'update')
-                    model = modelupdate(**row)
-                    response = requests_update(server_url=api_url, endpoint=table_name, pk=row_pk, model=model)
-                    updated_rows.append(row_pk)
-                else:
-                    logger.debug(f"{row_pk} unchanged. Skipping...")
-                    unchanged_rows.append(row_pk)
-        resource.close()
+                        logger.debug(f"{row_pk} unchanged. Skipping...")
+                        unchanged_rows.append(row_pk)
 
         logger.info(f"{resource.name.capitalize()} | Rows posted: {len(loaded_rows)}. Rows updated: {len(updated_rows)}. Rows unchanged: {len(unchanged_rows)}")
         logger.debug(f"{resource.name.capitalize()}\nPosted: {loaded_rows}\nUpdated: {updated_rows}\nUnchanged: {unchanged_rows}")
