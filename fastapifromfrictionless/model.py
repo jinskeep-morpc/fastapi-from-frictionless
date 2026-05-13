@@ -1,14 +1,16 @@
 # fastapifromfrictionless.model
 # Tools for building SQLmodels from Frictionless Schemas
 
-## Setup logger
 import logging
-
-logger = logging.getLogger(__name__)
-
+import os
 from os import PathLike
+from pathlib import Path
+
+import jinja2
 
 from .validate import assert_schemas_valid
+
+logger = logging.getLogger(__name__)
 
 type_map = {
     "string": {
@@ -32,6 +34,21 @@ type_map = {
     "geojson": {"default": "Geometry('GEOMETRY')"},
 }
 
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+_env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(str(_TEMPLATES_DIR)),
+    variable_start_string="<<",
+    variable_end_string=">>",
+    block_start_string="<%",
+    block_end_string="%>",
+    comment_start_string="<#",
+    comment_end_string="#>",
+    trim_blocks=True,
+    lstrip_blocks=True,
+    keep_trailing_newline=True,
+)
+
 
 class models:
     _models_logger = logging.getLogger(__name__).getChild(__qualname__)
@@ -46,44 +63,13 @@ class models:
             The location of the schema files
 
         """
-        import os
-
         self.logger = (
             logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(folder))
         )
 
-        self.header = """
-from typing import Optional, List
-from uuid import UUID
-from sqlalchemy import DateTime
-from sqlmodel import Field, Relationship, SQLModel
-from datetime import date, datetime, timezone, time, timedelta
-from pydantic import EmailStr, AnyUrl, Json
-from geoalchemy2.types import Geometry
-
-def utcnow():
-    '''Returns the current time in UTC.'''
-    return datetime.now(timezone.utc)
-
-class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixins/
-    '''A mixin to add created_at and updated_at timestamp fields to a model.'''
-
-    created_at: datetime = Field(
-        default_factory=utcnow,
-        nullable=False,
-        sa_type=DateTime(timezone=True)
-    )
-    updated_at: datetime = Field(
-        default_factory=utcnow,
-        nullable=False,
-        sa_column_kwargs={"onupdate": utcnow},
-        sa_type=DateTime(timezone=True)
-    )
-"""
         assert_schemas_valid(folder)
         self.folder: str = str(folder)
 
-        # Read schemas from folder
         self.schemas = [x for x in os.listdir(folder) if x.endswith("schema.yaml")]
         logger.info(f"Building models for schemas from {folder}: {' .'.join(self.schemas)}")
 
@@ -97,7 +83,7 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
         return self
 
     def build_model(self, folder: str, filename: str) -> str:
-        """Build the individual models (base, table, create, update, public, and public with relationships) for a schema
+        """Build the individual models for a schema via Jinja2 template.
 
         parameters:
         -----------
@@ -106,31 +92,23 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
         filename: str
             the full filename of the schema.
         """
-
-        import os
-
         import frictionless
 
         filepath = os.path.join(folder, filename)
 
-        # Store the base name of the schema as the name of the model.
         name = filename.split(".")[0].replace("-", " ").title().replace(" ", "")
 
-        # Validate path
         if not os.path.exists(filepath):
             self.logger.error(f"{filepath} does not exist.")
 
-        # Load the schema
         try:
             schema = frictionless.Schema(filepath)
         except Exception as e:
             self.logger.error(f"{e}")
 
-        # Store the foreign keys from the schema to get references to other tables.
         foreign_keys = [x["fields"][0] for x in schema.foreign_keys]
         self.logger.info(f"Schema {name} foreign keys {foreign_keys}")
 
-        # Check other schemas to see if they reference this schema
         relationships = []
         for other_filename in self.schemas:
             if other_filename != filename:
@@ -143,149 +121,92 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
                             self.logger.debug(f"{name} is referenced by {other_name}")
                             relationships.append(other_name)
                         else:
-                            self.logger.debug(f"{name} not reference by {other_name}")
+                            self.logger.debug(f"{name} not referenced by {other_name}")
         if len(relationships) == 0:
             self.logger.info(f"{name} not referenced by other schemas.")
         else:
             self.logger.info(f"{name} is referenced by {relationships}")
 
-        # Check if primary key is 'id'. These will be build in SQLmodel to be auto-incrementing.
         auto_id = "id" in schema.primary_key
         if auto_id:
             self.logger.info("Primary key is 'id'. Will add to table model with autoincrement.")
 
-        # Check if schema is for a many-to-many link table
-        if (len(foreign_keys) == 2) & (len(schema.primary_key) == 2):
-            link_table = True
+        link_table = (len(foreign_keys) == 2) and (len(schema.primary_key) == 2)
+        if link_table:
             self.logger.info(f"{name} is a many-to-many link table.")
-        else:
-            link_table = False
 
-        # Build the base model
+        # Build base model field strings
         basemodel_fields: list[str] = []
-
-        # For each field in the scheme create a string for the model.
         for field_name in schema.field_names:
             field = schema.get_field(field_name)
 
-            # Skip id, will include in table model.
             if (field.name == "id") and auto_id:
                 continue
+
+            field_string = f"{field.name}: "
+            field_string += f"{type_map[field.type][field.format]}"
+
+            if "required" not in field.constraints:
+                field_string += " | None"
+                required = False
             else:
-                # Build strong from schema attributes.
-                field_string = ""
-                field_string += f"{field.name}: "
-                field_string += f"{type_map[field.type][field.format]}"
+                required = True
 
-                # Check if field is required by looking at the constraints descriptor.
-                if "required" not in field.constraints:
-                    field_string += " | None"
-                    required = False
-                else:
-                    required = True
+            if field.name in schema.primary_key:
+                field_string += " = Field(primary_key = True)"
 
-                # Check if the field is a primary key
-                if field.name in schema.primary_key:
-                    field_string += " = Field(primary_key = True)"
-
-                # Check if the field is a foreign key
-                if field.name in foreign_keys:
-                    if " = Field(primary_key = True)" in field_string:
-                        field_string = f"{field_string.rstrip(')')}, foreign_key='{field.name.replace('_', '.')}')"
-                    else:
-                        field_string += f" = Field({'default=None, ' if required else ''}foreign_key='{field.name.replace('_', '.')}')"
-
-                self.logger.info(f"{field} converted to {field_string}")
-                basemodel_fields.append(field_string)
-
-        basemodel_string = f"""class {name}Base(SQLModel):
-    {"\n    ".join(basemodel_fields)}
-"""
-        self.logger.debug(f"{basemodel_string}")
-
-        # Build table model
-        tablemodel_string = f"""class {name}({name}Base, TimestampMixin, table=True):
-"""
-        # If primary key is 'id' add to table.
-        if auto_id:
-            tablemodel_string += "    id: int | None = Field(default=None, primary_key=True)\n"
-
-        # If schema is referenced by other schemas add to table
-        if len(relationships) > 0:
-            for relationship in relationships:
-                tablemodel_string += f"    {relationship.lower()}s: list['{relationship}'] | None = Relationship(back_populates='{name.lower()}s')\n"
-
-        # If schema references other schemas add to table.
-        if len(foreign_keys) > 0:
-            for fk in foreign_keys:
-                tablemodel_string += f"    {fk.split('_')[0]}s: list['{fk.split('_')[0].capitalize()}'] | None = Relationship(back_populates='{name.lower()}s')\n"
-        if (not auto_id) & (len(relationships) == 0) & (len(foreign_keys) == 0):
-            tablemodel_string += "    pass\n"
-
-        self.logger.info(f"{tablemodel_string}")
-
-        # Build Create model
-        createmodel_string = f"""class {name}Create({name}Base):
-    pass
-"""
-        self.logger.debug(f"{createmodel_string}")
-
-        # Build update model
-        updatemodel_string = f"""class {name}Update({name}Base):\n"""
-        for field_str in basemodel_fields:
-            # Remove everything except datatype and None
-            if " = " in field_str:
-                field_str = field_str.split(" = ")[0]
-            if " | None" not in field_str:
-                updatemodel_string += f"    {field_str} | None\n"
-            else:
-                updatemodel_string += f"    {field_str}\n"
-
-        self.logger.debug(f"{updatemodel_string}")
-
-        # Build public model
-        publicmodel_string = f"""class {name}Public({name}Base):{"\n    id: int" if auto_id else ""}
-    created_at: datetime
-    updated_at: datetime
-"""
-        self.logger.debug(f"{publicmodel_string}")
-
-        # Build public with relationships model for models with foreign keys to facilitate queries
-        relationshipsmodel_string = ""
-        if (len(foreign_keys) > 0) | (len(relationships) > 0):
-            relationshipsmodel_string += f"""class {name}PublicWithAll({name}Public):\n"""
-            for fk in foreign_keys:
-                relationshipsmodel_string += f"    {fk.split('_')[0]}s: List['{fk.split('_')[0].capitalize()}Public'] | None = None\n"
-            for relationship in relationships:
-                if relationship.startswith("Link"):
-                    joined = relationship.replace("Link", "").replace(name, "").replace("-", "")
-                    relationshipsmodel_string += f"    {relationship.lower()}s: List['{relationship}PublicWith{joined}'] | None = None\n"
-                else:
-                    relationshipsmodel_string += (
-                        f"    {relationship.lower()}s: List['{relationship}Public'] | None = None\n"
+            if field.name in foreign_keys:
+                if " = Field(primary_key = True)" in field_string:
+                    field_string = (
+                        f"{field_string.rstrip(')')}, foreign_key='{field.name.replace('_', '.')}')"
                     )
+                else:
+                    field_string += f" = Field({'default=None, ' if required else ''}foreign_key='{field.name.replace('_', '.')}')"
 
-        if link_table:
-            for fk in foreign_keys:
-                relationshipsmodel_string += (
-                    f"""\nclass {name}PublicWith{fk.split("_")[0].capitalize()}({name}Public):\n"""
-                )
-                relationshipsmodel_string += f"    {fk.split('_')[0]}s: List['{fk.split('_')[0].capitalize()}Public'] | None = None\n\n"
+            self.logger.info(f"{field} converted to {field_string}")
+            basemodel_fields.append(field_string)
 
-        self.logger.debug(f"{relationshipsmodel_string}")
+        # Precompute derived template context
+        basemodel_fields_str = "\n    ".join(basemodel_fields)
 
-        return f"""
-## {name} models
-{basemodel_string}
-{tablemodel_string}
-{createmodel_string}
-{updatemodel_string}
-{publicmodel_string}
-{relationshipsmodel_string}
-    """
+        update_lines = []
+        for fs in basemodel_fields:
+            fs = fs.split(" = ")[0] if " = " in fs else fs
+            if " | None" not in fs:
+                fs += " | None"
+            update_lines.append(f"    {fs}")
+        update_fields_str = "\n".join(update_lines)
+
+        fk_models = [
+            {"field": fk, "prefix": fk.split("_")[0], "related": fk.split("_")[0].capitalize()}
+            for fk in foreign_keys
+        ]
+
+        rel_models = []
+        for rel in relationships:
+            is_link = rel.startswith("Link")
+            joined = rel.replace("Link", "").replace(name, "").replace("-", "") if is_link else ""
+            rel_models.append(
+                {"name": rel, "lower_name": rel.lower(), "is_link": is_link, "joined": joined}
+            )
+
+        template = _env.get_template("model_block.py.jinja2")
+        result = template.render(
+            name=name,
+            auto_id=auto_id,
+            link_table=link_table,
+            basemodel_fields_str=basemodel_fields_str,
+            update_fields_str=update_fields_str,
+            foreign_keys=foreign_keys,
+            relationships=relationships,
+            fk_models=fk_models,
+            rel_models=rel_models,
+        )
+        self.logger.debug(result)
+        return result
 
     def save(self, path: str | PathLike):
+        header = _env.get_template("models_header.py.jinja2").render()
         with open(path, "w") as file:
-            file_string = "".join([self.header] + self.models)
-            file.write(file_string)
+            file.write(header + "".join(self.models))
             logger.info(f"models saved to {path}")
