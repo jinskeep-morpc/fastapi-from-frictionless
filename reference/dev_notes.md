@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #30: HTTP error responses
+
+Added custom `HTTPException` and `RequestValidationError` handlers to the generated `app_header.py.jinja2` template. Both return consistent JSON bodies: `{"error": ..., "status_code": ...}` for HTTP errors and `{"error": "Validation error", "detail": [...]}` for validation failures. 2 tests added; all 55 pass.
+
+---
+
 ## 2026-05-13 — Issue #28: Structured logging
 
 Added `fastapifromfrictionless/logging_config.py` with `configure_logging(level, fmt, datefmt)`. Sets level on the `fastapifromfrictionless` package root logger, clears existing handlers on repeated calls, attaches `StreamHandler(sys.stderr)` with a default format `%(asctime)s %(levelname)-8s %(name)s — %(message)s`, and sets `propagate=False`. Accepts both string level names (case-insensitive) and integer levels; raises `ValueError` for unknown strings. Exported from `__init__.py`. 9 tests added; all 53 pass.
