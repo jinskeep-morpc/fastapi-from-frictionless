@@ -118,4 +118,4 @@ Items are grouped by priority. Checked items are complete.
 - [ ] Auto-generated front-end form from schema fields
 - [ ] DrawIO ERD → Frictionless schema converter
 - [ ] Default query routes for common patterns derived from schema metadata
-- [ ] GET/POST file endpoints for uploading and downloading the Excel workbook directly via the API
+- [x] GET/POST file endpoints for uploading and downloading the Excel workbook directly via the API

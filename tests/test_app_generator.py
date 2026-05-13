@@ -176,6 +176,36 @@ def test_get_all_uses_offset_limit_in_query(simple_folder):
 
 
 # ---------------------------------------------------------------------------
+# Excel file endpoints
+# ---------------------------------------------------------------------------
+
+
+def test_excel_export_endpoint_in_saved_file(simple_folder, tmp_path):
+    out = tmp_path / "app.py"
+    app(str(simple_folder)).build().save(out)
+    content = out.read_text()
+    assert "@app.get('/excel/export'" in content
+    assert "dump_to_excel" in content
+
+
+def test_excel_import_endpoint_in_saved_file(simple_folder, tmp_path):
+    out = tmp_path / "app.py"
+    app(str(simple_folder)).build().save(out)
+    content = out.read_text()
+    assert "@app.post('/excel/import')" in content
+    assert "UploadFile" in content
+    assert "update_api_from_package" in content
+
+
+def test_schema_folder_and_api_url_config_in_saved_file(simple_folder, tmp_path):
+    out = tmp_path / "app.py"
+    app(str(simple_folder)).build().save(out)
+    content = out.read_text()
+    assert "SCHEMA_FOLDER" in content
+    assert "API_URL" in content
+
+
+# ---------------------------------------------------------------------------
 # API key authentication
 # ---------------------------------------------------------------------------
 
