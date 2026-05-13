@@ -37,6 +37,12 @@ def test_output_contains_create_db_function(folder):
     assert "SQLModel.metadata.create_all(engine)" in db.database
 
 
+def test_database_url_env_var_in_output(folder):
+    db = database(str(folder)).build("app.db")
+    assert "DATABASE_URL" in db.database
+    assert "os.getenv" in db.database
+
+
 def test_save_writes_file(folder, tmp_path):
     out = tmp_path / "database.py"
     database(str(folder)).build("app.db").save(out)
