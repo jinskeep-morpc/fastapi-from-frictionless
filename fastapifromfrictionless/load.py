@@ -61,7 +61,9 @@ def empty_excel(schema_folder, output_filepath):
             writer.sheets[sheet].autofit()
 
 
-def create_package(folder: str | os.PathLike, filename: str | os.PathLike, validate: bool = True):
+def create_package(
+    folder: str | os.PathLike, filename: str | os.PathLike, validate: bool = True
+) -> "frictionless.Package":
     import os
     from contextlib import chdir
     from datetime import datetime
@@ -70,43 +72,43 @@ def create_package(folder: str | os.PathLike, filename: str | os.PathLike, valid
     from frictionless.formats import ExcelControl
     from frictionless.resources import TableResource
 
+    stem = pathlib.Path(filename).stem
+    filename_str = str(filename)
+
     with chdir(folder):
         schemas = [x for x in os.listdir(os.getcwd()) if x.endswith("schema.yaml")]
-        resources = []
+        resources: list = []
 
         for schema in schemas:
             logger.info(f"appending {schema} to package")
             schema_name = schema.replace(".schema.yaml", "")
             resource = TableResource(
                 name=schema_name,
-                path=filename,
+                path=filename_str,
                 control=ExcelControl(sheet=schema_name),
                 schema=(frictionless.Schema.from_descriptor(schema)),
-                dialect=Dialect(skip_blank_rows=True),
+                dialect=frictionless.Dialect(skip_blank_rows=True),
             )
             resource.infer(stats=True)
-
             resources.append(resource)
 
-        logger.debug("Building package.")
         package = frictionless.Package(
-            name=filename.split(".")[0],
+            name=stem,
             resources=resources,
             version="0.0.1",
             created=datetime.now().isoformat(),
         )
 
-        logger.info(f"Saving package to {folder}/{filename.split('.')[0] + '.package.yaml'}")
-        package.to_yaml(filename.split(".")[0] + ".package.yaml")
+        package_filename = stem + ".package.yaml"
+        logger.info(f"Saving package to {folder}/{package_filename}")
+        package.to_yaml(package_filename)
 
         if validate:
             valid = package.validate()
             if valid.valid:
-                logger.info(f"{filename.split('.')[0] + '.package.yaml'} is a valid package.")
+                logger.info(f"{package_filename} is a valid package.")
             else:
-                logger.error(
-                    f"{filename.split('.')[0] + '.package.yaml'} is an invalid package. Report below:\n{valid}"
-                )
+                logger.error(f"{package_filename} is an invalid package. Report below:\n{valid}")
                 raise RuntimeError
 
     return package

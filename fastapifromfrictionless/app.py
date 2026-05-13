@@ -21,13 +21,15 @@ class app:
 
         import frictionless
 
-        self.logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(folder)
+        self.logger = (
+            logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(folder))
+        )
 
         if not os.path.exists(folder):
             self.logger.error(f"{folder} does not exist.")
             raise ValueError
         else:
-            self.folder = folder
+            self.folder: str = str(folder)
 
         self.header = """
 # app.py

@@ -48,7 +48,9 @@ class models:
         """
         import os
 
-        self.logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(folder)
+        self.logger = (
+            logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(folder))
+        )
 
         self.header = """
 from typing import Optional, List
@@ -79,14 +81,14 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
     )
 """
         assert_schemas_valid(folder)
-        self.folder = folder
+        self.folder: str = str(folder)
 
         # Read schemas from folder
         self.schemas = [x for x in os.listdir(folder) if x.endswith("schema.yaml")]
         logger.info(f"Building models for schemas from {folder}: {' .'.join(self.schemas)}")
 
-    def build(self):
-        self.models = []
+    def build(self) -> "models":
+        self.models: list[str] = []
         for filename in self.schemas:
             self.logger.info(f"Building model for {filename}")
             model = self.build_model(self.folder, filename)
@@ -94,7 +96,7 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
 
         return self
 
-    def build_model(self, folder, filename: str) -> str:
+    def build_model(self, folder: str, filename: str) -> str:
         """Build the individual models (base, table, create, update, public, and public with relationships) for a schema
 
         parameters:
@@ -160,14 +162,14 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
             link_table = False
 
         # Build the base model
-        basemodel_fields = []
+        basemodel_fields: list[str] = []
 
         # For each field in the scheme create a string for the model.
-        for field in schema.field_names:
-            field = schema.get_field(field)
+        for field_name in schema.field_names:
+            field = schema.get_field(field_name)
 
             # Skip id, will include in table model.
-            if (field.name == "id") & (auto_id):
+            if (field.name == "id") and auto_id:
                 continue
             else:
                 # Build strong from schema attributes.
@@ -230,14 +232,14 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
 
         # Build update model
         updatemodel_string = f"""class {name}Update({name}Base):\n"""
-        for field in basemodel_fields:
+        for field_str in basemodel_fields:
             # Remove everything except datatype and None
-            if " = " in field:
-                field = field.split(" = ")[0]
-            if " | None" not in field:
-                updatemodel_string += f"    {field} | None\n"  # Add optional if not present
+            if " = " in field_str:
+                field_str = field_str.split(" = ")[0]
+            if " | None" not in field_str:
+                updatemodel_string += f"    {field_str} | None\n"
             else:
-                updatemodel_string += f"    {field}\n"
+                updatemodel_string += f"    {field_str}\n"
 
         self.logger.debug(f"{updatemodel_string}")
 

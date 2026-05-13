@@ -30,6 +30,7 @@ dependencies = [
 dev = [
     "pytest",
     "ruff",
+    "mypy",
 ]
 
 [build-system]
@@ -62,3 +63,8 @@ ignore = [
     "F403",   # star import — intentional re-export in __init__.py
     "F401",   # unused import — many are intentional re-exports; clean up separately
 ]
+
+[tool.mypy]
+ignore_missing_imports = true
+no_strict_optional = true
+exclude = ["doc/"]

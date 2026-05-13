@@ -1,6 +1,14 @@
+## 2026-05-13 — Issue #22: Type hints and mypy
+
+Fixed 19 mypy errors across the package: (1) renamed loop variable `field` to `field_name` in `model.py` to avoid shadowing between `str` and `frictionless.Field` types; (2) annotated `basemodel_fields: list[str]` explicitly; (3) cast `PathLike` to `str` in `logging.getChild()` calls in `model.py` and `app.py`; (4) stored `self.folder` as `str` in both generators; (5) replaced `filename.split(".")` with `pathlib.Path(filename).stem` in `load.py`. Added `[tool.mypy]` config to `pyproject.toml`, `mypy` to `[dev]` extras, and a mypy step to the CI workflow. Also fixed 51 ruff issues and reformatted all source files. mypy and all 44 tests clean.
+
+---
+
 ## 2026-05-13 — Issue #20: CI pipeline
 
 Added `.github/workflows/ci.yml` — runs `ruff check`, `ruff format --check`, and `pytest` on every push/PR. Added `[dev]` optional dependencies to `pyproject.toml` (`pip install -e ".[dev]"`). Configured ruff with `target-version = "py312"` (codebase uses 3.12 f-string syntax), `line-length = 100`, and ignores for E501/E402/F403/F401. Fixed 61 lint issues across the package and formatted all source files. All 44 tests still passing.
+
+---
 ## 2026-05-13 — Issue #18: CLAUDE.md workflow refinement
 
 User updated the development workflow: removed the "ask about branch" and "ask before PR" interactive steps to support fully autonomous operation. Added a "update README roadmap" step (step 6) after writing tests. No code changes.
