@@ -109,7 +109,7 @@ Items are grouped by priority. Checked items are complete.
 - [x] CLI entry point (`fastapifromfrictionless generate <schema-folder>`) so users do not need to write Python
 - [x] Dry-run / preview mode that prints generated code without writing files
 - [x] Configurable output — opt in/out of specific endpoint types, choose database backend
-- [ ] Package versioning and automated releases (GitHub Actions → PyPI)
+- [x] Package versioning and automated releases (GitHub Actions → PyPI)
 - [ ] Expand documentation and examples in `doc/`
 
 ### Optional / Future
