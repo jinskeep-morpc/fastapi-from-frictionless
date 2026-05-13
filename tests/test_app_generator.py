@@ -176,6 +176,27 @@ def test_get_all_uses_offset_limit_in_query(simple_folder):
 
 
 # ---------------------------------------------------------------------------
+# API key authentication
+# ---------------------------------------------------------------------------
+
+
+def test_api_key_env_var_in_saved_file(simple_folder, tmp_path):
+    out = tmp_path / "app.py"
+    app(str(simple_folder)).build().save(out)
+    content = out.read_text()
+    assert "API_KEY" in content
+    assert "verify_api_key" in content
+
+
+def test_api_key_header_in_saved_file(simple_folder, tmp_path):
+    out = tmp_path / "app.py"
+    app(str(simple_folder)).build().save(out)
+    content = out.read_text()
+    assert "APIKeyHeader" in content
+    assert "X-API-Key" in content
+
+
+# ---------------------------------------------------------------------------
 # CORS and security headers
 # ---------------------------------------------------------------------------
 
