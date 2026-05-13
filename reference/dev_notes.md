@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #40: API key authentication
+
+Added `X-API-Key` header authentication to the generated `app_header.py.jinja2` template using FastAPI's `APIKeyHeader` and `Security`. If `API_KEY` env var is set, all requests must include a matching header (returns 403 otherwise). If unset, auth is disabled (dev-friendly default). Applied globally via `FastAPI(dependencies=[Depends(verify_api_key)])`. 2 tests added; all 69 pass.
+
+---
+
 ## 2026-05-13 — Issue #38: CLI entry point
 
 Added `fastapifromfrictionless/cli.py` with a `generate` subcommand. Accepts `schema_folder` positional arg, `--output` (default `.`), and `--db` (default `database.db`). Calls the three generators directly and writes files to the output directory. Wired via `[project.scripts]` in `pyproject.toml` so `pip install -e .` makes `fastapifromfrictionless generate <schema-folder>` available. 6 tests added; all 67 pass.
