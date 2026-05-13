@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #24: Structured logging
+
+Added `fastapifromfrictionless/logging_config.py` with `configure_logging(level, fmt, datefmt)`. Sets level on the package root logger, attaches a single StreamHandler with timestamp+level+name+message format, clears existing handlers on repeated calls, and disables propagation to the root logger. Exported from `__init__`. 8 pytest tests covering level-setting, handler count, repeated calls, propagation, invalid levels, and case-insensitive parsing.
+
+---
+
 ## 2026-05-13 — Issue #22: Type hints and mypy
 
 Fixed 19 mypy errors across the package: (1) renamed loop variable `field` to `field_name` in `model.py` to avoid shadowing between `str` and `frictionless.Field` types; (2) annotated `basemodel_fields: list[str]` explicitly; (3) cast `PathLike` to `str` in `logging.getChild()` calls in `model.py` and `app.py`; (4) stored `self.folder` as `str` in both generators; (5) replaced `filename.split(".")` with `pathlib.Path(filename).stem` in `load.py`. Added `[tool.mypy]` config to `pyproject.toml`, `mypy` to `[dev]` extras, and a mypy step to the CI workflow. Also fixed 51 ruff issues and reformatted all source files. mypy and all 44 tests clean.
