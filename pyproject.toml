@@ -11,8 +11,9 @@ license = "MIT"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
 ]
 
 dependencies = [
@@ -38,19 +39,14 @@ dev = [
 fastapifromfrictionless = "fastapifromfrictionless.cli:main"
 
 [build-system]
-requires = ["setuptools>=61.0", "setuptools-scm"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
 version = {attr = "fastapifromfrictionless.__version__"}
 
-[tool.setuptools_scm]
-# When a git tag like v0.1.0 is present, setuptools-scm infers the version.
-# The write_to field is omitted — version is read from __version__ in __init__.py
-# for now; switch to write_to = "fastapifromfrictionless/_version.py" when ready.
-
 [tool.setuptools.packages.find]
-exclude = ["demo"] 
+exclude = ["demo", "tests", "tests.*"]
 namespaces = false
 
 [tool.setuptools.package-data]
