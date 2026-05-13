@@ -106,7 +106,7 @@ Items are grouped by priority. Checked items are complete.
 
 ### Developer Experience
 
-- [ ] CLI entry point (`fastapifromfrictionless generate <schema-folder>`) so users do not need to write Python
+- [x] CLI entry point (`fastapifromfrictionless generate <schema-folder>`) so users do not need to write Python
 - [ ] Dry-run / preview mode that prints generated code without writing files
 - [ ] Configurable output — opt in/out of specific endpoint types, choose database backend
 - [ ] Package versioning and automated releases (GitHub Actions → PyPI)
