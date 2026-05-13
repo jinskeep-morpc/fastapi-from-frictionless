@@ -176,6 +176,26 @@ def test_get_all_uses_offset_limit_in_query(simple_folder):
 
 
 # ---------------------------------------------------------------------------
+# Default query routes
+# ---------------------------------------------------------------------------
+
+
+def test_recent_route_generated(simple_folder):
+    out = _output(simple_folder)
+    assert "@app.get('/location/recent'" in out
+
+
+def test_recent_route_orders_by_created_at(simple_folder):
+    out = _output(simple_folder)
+    assert "order_by(Location.created_at.desc())" in out
+
+
+def test_recent_route_has_limit_param(simple_folder):
+    out = _output(simple_folder)
+    assert "recent_locations" in out
+
+
+# ---------------------------------------------------------------------------
 # Excel file endpoints
 # ---------------------------------------------------------------------------
 
