@@ -12,9 +12,10 @@ The driving goal is to bridge the gap between familiar flat-file workflows (Exce
 
 - Generate `models.py`, `app.py`, and `database.py` from `*.schema.yaml` files
 - Automatic SQLModel class hierarchy per schema (base, table, create, update, public, public-with-relations)
-- Full CRUD + dynamic query endpoints per resource
+- Full CRUD + pagination + recent-records endpoints per resource
 - Excel workbook as a data-entry interface — create or update API records from a `.xlsx` file
 - Frictionless package wraps the workbook for field-level validation before ingestion
+- CLI entry point: `fastapifromfrictionless generate <schema-folder>`
 
 ## Requirements
 
@@ -24,6 +25,7 @@ The driving goal is to bridge the gap between familiar flat-file workflows (Exce
 - [SQLModel](https://pypi.org/project/sqlmodel/)
 - [SQLAlchemy](https://pypi.org/project/sqlalchemy/)
 - [fastapi-querybuilder](https://github.com/bhadri01/fastapi-querybuilder)
+- [jinja2](https://pypi.org/project/Jinja2/)
 - [requests](https://pypi.org/project/requests/)
 - [pandas](https://pypi.org/project/pandas/)
 - [xlsxwriter](https://pypi.org/project/XlsxWriter/)
@@ -38,36 +40,84 @@ pip install -e .
 
 ## Quick Start
 
-1. Place `*.schema.yaml` files in a folder (see `doc/data/` for examples).
-2. Run the build function to generate application files:
+### 1. Generate application files from schemas
+
+Place `*.schema.yaml` files in a folder (see `doc/data/` for examples), then run:
+
+```bash
+fastapifromfrictionless generate path/to/schemas --output path/to/output
+```
+
+Or from Python:
 
 ```python
 from fastapifromfrictionless.load import build_database
 
-build_database(schema_folder="path/to/schemas", output_dir="path/to/output")
+build_database(schema_folder="path/to/schemas", db_filename="app.db")
 ```
 
-3. Start the generated API:
+### 2. Start the generated API
 
 ```bash
+cd path/to/output
 uvicorn app:app --reload
 ```
 
-4. (Optional) Create a blank Excel workbook pre-formatted for data entry:
+### 3. Generated endpoints
+
+For each schema resource (e.g. `sensor`), the generated app exposes:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/sensor` | Create a record |
+| `GET` | `/sensor/all` | List all (paginated: `?offset=0&limit=100`) |
+| `GET` | `/sensor/recent` | Most recent records (`?limit=10`) |
+| `GET` | `/sensor/{id}` | Get one by primary key |
+| `PATCH` | `/sensor/{id}` | Update a record |
+| `DELETE` | `/sensor/{id}` | Delete a record |
+| `GET` | `/sensor/query` | Dynamic filter query (FK schemas only) |
+| `GET` | `/excel/export` | Download all data as `.xlsx` |
+| `POST` | `/excel/import` | Upload and sync an `.xlsx` workbook |
+
+### 4. Configuration via environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `sqlite:///database.db` | Database connection URL (overrides SQLite default) |
+| `ALLOWED_ORIGINS` | `*` | Comma-separated CORS allowed origins |
+| `API_KEY` | *(unset)* | If set, all requests require `X-API-Key: <value>` header |
+| `SCHEMA_FOLDER` | `.` | Path to `*.schema.yaml` files (used by Excel import/export) |
+| `API_URL` | `http://localhost:8000` | Base URL of this app (used by Excel export) |
+
+### 5. Excel data workflow
 
 ```python
-from fastapifromfrictionless.load import empty_excel
+from fastapifromfrictionless.load import empty_excel, create_package, update_api_from_package
 
+# Create a blank workbook with one sheet per schema
 empty_excel(schema_folder="path/to/schemas", output_filepath="data.xlsx")
-```
 
-5. Ingest data from a filled-in workbook:
-
-```python
-from fastapifromfrictionless.load import create_package, update_api_from_package
-
+# Fill in data, then validate and sync to the API
 create_package(folder="path/to/schemas", filename="data.xlsx")
 update_api_from_package(api_url="http://localhost:8000", package_file="data.package.yaml")
+
+# Or export all current API data to Excel
+from fastapifromfrictionless.load import dump_to_excel
+dump_to_excel(api_url="http://localhost:8000", schema_folder="path/to/schemas", output_filepath="export.xlsx")
+```
+
+### 6. CLI reference
+
+```
+fastapifromfrictionless generate <schema_folder> [options]
+
+Options:
+  --output DIR      Output directory (default: current directory)
+  --db FILENAME     SQLite database filename (default: database.db)
+  --dry-run         Print generated code to stdout without writing files
+  --no-models       Skip generating models.py
+  --no-app          Skip generating app.py
+  --no-db           Skip generating database.py
 ```
 
 See `doc/` for a worked example with real schemas and generated output.
@@ -110,7 +160,7 @@ Items are grouped by priority. Checked items are complete.
 - [x] Dry-run / preview mode that prints generated code without writing files
 - [x] Configurable output — opt in/out of specific endpoint types, choose database backend
 - [x] Package versioning and automated releases (GitHub Actions → PyPI)
-- [ ] Expand documentation and examples in `doc/`
+- [x] Expand documentation and examples in `doc/`
 
 ### Optional / Future
 

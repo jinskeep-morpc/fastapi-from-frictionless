@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #52: Expand documentation
+
+Rewrote README Quick Start with six numbered sections: CLI usage, starting the app, endpoint table per resource (POST, GET/all, GET/recent, GET/{pk}, PATCH, DELETE, GET/query, GET/excel/export, POST/excel/import), env var configuration table (DATABASE_URL, ALLOWED_ORIGINS, API_KEY, SCHEMA_FOLDER, API_URL), Excel workflow code examples, and CLI reference. Added jinja2 to Requirements list. Updated Core capabilities. No code changes.
+
+---
+
 ## 2026-05-13 — Issue #50: Default query routes
 
 Added `GET /{resource}/recent` endpoint to all generated schemas. Returns the N most recently created records ordered by `created_at.desc()`. Accepts `limit` param (default 10, max 100). Uses `TimestampMixin` which all table models already have. 3 tests added; all 82 pass.
