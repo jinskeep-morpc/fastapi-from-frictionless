@@ -66,3 +66,35 @@ def test_generate_default_db_filename(schema_folder, tmp_path):
 def test_no_command_exits():
     with pytest.raises(SystemExit):
         main([])
+
+
+def test_dry_run_does_not_write_files(schema_folder, tmp_path, capsys):
+    out = tmp_path / "out"
+    main(["generate", str(schema_folder), "--output", str(out), "--dry-run"])
+    assert not (out / "models.py").exists()
+    assert not (out / "app.py").exists()
+    assert not (out / "database.py").exists()
+
+
+def test_dry_run_prints_models(schema_folder, tmp_path, capsys):
+    out = tmp_path / "out"
+    main(["generate", str(schema_folder), "--output", str(out), "--dry-run"])
+    captured = capsys.readouterr()
+    assert "models.py" in captured.out
+    assert "SQLModel" in captured.out
+
+
+def test_dry_run_prints_app(schema_folder, tmp_path, capsys):
+    out = tmp_path / "out"
+    main(["generate", str(schema_folder), "--output", str(out), "--dry-run"])
+    captured = capsys.readouterr()
+    assert "app.py" in captured.out
+    assert "FastAPI" in captured.out
+
+
+def test_dry_run_prints_database(schema_folder, tmp_path, capsys):
+    out = tmp_path / "out"
+    main(["generate", str(schema_folder), "--output", str(out), "--dry-run"])
+    captured = capsys.readouterr()
+    assert "database.py" in captured.out
+    assert "create_engine" in captured.out
