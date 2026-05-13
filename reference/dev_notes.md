@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #38: CLI entry point
+
+Added `fastapifromfrictionless/cli.py` with a `generate` subcommand. Accepts `schema_folder` positional arg, `--output` (default `.`), and `--db` (default `database.db`). Calls the three generators directly and writes files to the output directory. Wired via `[project.scripts]` in `pyproject.toml` so `pip install -e .` makes `fastapifromfrictionless generate <schema-folder>` available. 6 tests added; all 67 pass.
+
+---
+
 ## 2026-05-13 — Issue #36: Configuration management
 
 Generated `database.py` now reads `DATABASE_URL` from the environment, falling back to the default SQLite file. `connect_args` is set conditionally (`{"check_same_thread": False}` for SQLite, `{}` otherwise) to enable PostgreSQL or other backends in production. `ALLOWED_ORIGINS` was already in `app.py`. 1 test added; all 61 pass.
