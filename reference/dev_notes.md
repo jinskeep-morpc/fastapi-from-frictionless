@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #46: Package versioning and automated releases
+
+Updated `.github/workflows/python-publish.yml`: now uses `ubuntu-latest`, `fetch-depth: 0` (so setuptools-scm can read git tags), Python 3.12 consistent with CI, and correct PyPI URL (`fastapifromfrictionless`). Added `[tool.setuptools_scm]` section to `pyproject.toml` documenting the path to full scm-based versioning. Release is triggered by creating a GitHub Release (publishing a `v*` tag).
+
+---
+
 ## 2026-05-13 — Issue #44: Configurable output
 
 Added `--no-models`, `--no-app`, `--no-db` flags to the CLI `generate` subcommand. Each defaults to False (all files generated). Useful when iterating on schemas after initial setup to regenerate only the changed file. 3 tests added; all 76 pass.
