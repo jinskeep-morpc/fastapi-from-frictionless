@@ -9,25 +9,41 @@ def _generate(args):
     from .database import database
     from .model import models
 
-    models_gen = models(args.schema_folder).build()
-    app_gen = app(args.schema_folder).build()
-    db_gen = database(args.schema_folder).build(args.db_filename)
+    gen_models = not args.no_models
+    gen_app = not args.no_app
+    gen_db = not args.no_db
+
+    models_gen = models(args.schema_folder).build() if gen_models else None
+    app_gen = app(args.schema_folder).build() if gen_app else None
+    db_gen = database(args.schema_folder).build(args.db_filename) if gen_db else None
 
     if args.dry_run:
-        _print_preview("models.py", models_gen)
-        _print_preview("app.py", app_gen)
-        _print_preview("database.py", db_gen)
+        if models_gen:
+            _print_preview("models.py", models_gen)
+        if app_gen:
+            _print_preview("app.py", app_gen)
+        if db_gen:
+            _print_preview("database.py", db_gen)
         return
 
     out = pathlib.Path(args.output)
     out.mkdir(parents=True, exist_ok=True)
 
-    models_gen.save(out / "models.py")
-    app_gen.save(out / "app.py")
-    db_gen.save(out / "database.py")
-    (out / "__init__.py").touch()
+    if models_gen:
+        models_gen.save(out / "models.py")
+    if app_gen:
+        app_gen.save(out / "app.py")
+    if db_gen:
+        db_gen.save(out / "database.py")
+    if gen_models or gen_app or gen_db:
+        (out / "__init__.py").touch()
 
-    print(f"Generated app.py, models.py, database.py in {out}")
+    generated = [
+        f
+        for f, flag in [("models.py", gen_models), ("app.py", gen_app), ("database.py", gen_db)]
+        if flag
+    ]
+    print(f"Generated {', '.join(generated)} in {out}")
 
 
 def _print_preview(filename, generator):
@@ -35,7 +51,6 @@ def _print_preview(filename, generator):
     print(f"# {filename}")
     print(f"{'=' * 60}")
     if hasattr(generator, "models"):
-        # models generator stores header separately
         from .model import _env
 
         header = _env.get_template("models_header.py.jinja2").render()
@@ -77,6 +92,13 @@ def main(argv=None):
         action="store_true",
         default=False,
         help="Print generated file contents to stdout without writing files.",
+    )
+    gen.add_argument(
+        "--no-models", action="store_true", default=False, help="Skip generating models.py."
+    )
+    gen.add_argument("--no-app", action="store_true", default=False, help="Skip generating app.py.")
+    gen.add_argument(
+        "--no-db", action="store_true", default=False, help="Skip generating database.py."
     )
     gen.set_defaults(func=_generate)
 
