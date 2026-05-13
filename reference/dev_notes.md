@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #36: Configuration management
+
+Generated `database.py` now reads `DATABASE_URL` from the environment, falling back to the default SQLite file. `connect_args` is set conditionally (`{"check_same_thread": False}` for SQLite, `{}` otherwise) to enable PostgreSQL or other backends in production. `ALLOWED_ORIGINS` was already in `app.py`. 1 test added; all 61 pass.
+
+---
+
 ## 2026-05-13 — Issue #34: CORS and security headers
 
 Added `CORSMiddleware` (origins from `ALLOWED_ORIGINS` env var, comma-separated, default `*` for development) and `SecurityHeadersMiddleware` (sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Strict-Transport-Security`) to the generated `app_header.py.jinja2` template. 2 tests added; all 60 pass.

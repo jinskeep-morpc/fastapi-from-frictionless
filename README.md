@@ -98,7 +98,7 @@ Items are grouped by priority. Checked items are complete.
 
 - [ ] Async database support (replace sync SQLModel sessions with async SQLAlchemy)
 - [ ] Database migrations via [Alembic](https://alembic.sqlalchemy.org/) instead of `create_all`
-- [ ] Configuration management — accept settings via environment variables or a config file (database URL, allowed origins, etc.)
+- [x] Configuration management — accept settings via environment variables or a config file (database URL, allowed origins, etc.)
 - [x] CORS and security headers in generated `app.py`
 - [ ] API key / token authentication ([FastAPI security](https://fastapi.tiangolo.com/tutorial/security/first-steps/))
 - [x] Pagination on list endpoints
