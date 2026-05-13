@@ -83,15 +83,15 @@ Contains a worked example (sensor tracking) with real schemas, a generated app, 
 
 Follow these steps in order for every task:
 
+For each item in the roadmap:
+
 1. **Create a GitHub issue** — open an issue in this repo describing the work before making any changes.
-2. **Ask about branch** — ask the user whether to use a new branch or stay on the current one.
-3. **Create/switch branch** — create and check out the new branch, or stay on the current one per the user's answer.
-4. **Make changes in logical commits** — implement the work; commit in small, focused units with clear messages.
-5. **Write tests** — add or update tests covering the changes.
-6. **Prepend notes to `reference/dev_notes.md`** — prepend a brief summary of what was done and why. Do **not** read the file first; always prepend only.
-7. **Ask if there are more changes** — before opening a PR, ask the user whether there is additional work to include.
-8. **Create the PR** — open a pull request against the main branch with a clear title and summary.
-9. **Stop** — notify the user that the PR is open and wait for manual review and merge. Do not merge or push further changes.
+2. **Create/switch branch** — create and check out the new branch from the issue.
+3. **Make changes in logical commits** — implement the work; commit in small, focused units with clear messages.
+4. **Write tests** — add or update tests covering the changes.
+5. **Prepend notes to `reference/dev_notes.md`** — prepend a brief summary of what was done and why. Do **not** read the file first; always prepend only.
+6. **Update README.md**  — update the readme to update the completed roadmap item and any changes to other sections. 
+6. **Create the PR** — open a pull request against the main branch with a clear title and summary.
 
 ### Additional rules
 
