@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #48: GET/POST Excel file endpoints
+
+Added `GET /excel/export` and `POST /excel/import` routes to the generated `app_header.py.jinja2`. Export calls `dump_to_excel()` using `API_URL` and `SCHEMA_FOLDER` env vars and returns an xlsx `FileResponse`. Import accepts an `UploadFile`, saves to a temp file, runs `create_package` + `update_api_from_package` to sync rows into the database. Added `File`, `UploadFile`, `FileResponse`, `tempfile`, and `Path` imports. 3 tests added; all 79 pass.
+
+---
+
 ## 2026-05-13 — Issue #46: Package versioning and automated releases
 
 Updated `.github/workflows/python-publish.yml`: now uses `ubuntu-latest`, `fetch-depth: 0` (so setuptools-scm can read git tags), Python 3.12 consistent with CI, and correct PyPI URL (`fastapifromfrictionless`). Added `[tool.setuptools_scm]` section to `pyproject.toml` documenting the path to full scm-based versioning. Release is triggered by creating a GitHub Release (publishing a `v*` tag).
