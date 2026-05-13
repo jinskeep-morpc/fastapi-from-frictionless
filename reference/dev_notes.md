@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #34: CORS and security headers
+
+Added `CORSMiddleware` (origins from `ALLOWED_ORIGINS` env var, comma-separated, default `*` for development) and `SecurityHeadersMiddleware` (sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Strict-Transport-Security`) to the generated `app_header.py.jinja2` template. 2 tests added; all 60 pass.
+
+---
+
 ## 2026-05-13 — Issue #32: Pagination
 
 Added `offset: int = 0` and `limit: int = Query(default=100, le=1000)` parameters to all generated `GET /all` endpoints. Uses SQLModel's `.offset().limit()` chaining on the select statement. 3 tests added; all 58 pass.

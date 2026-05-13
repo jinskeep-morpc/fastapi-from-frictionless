@@ -1,18 +1,43 @@
 
 # app.py
+import os
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import fastapi
 from fastapi_querybuilder import QueryBuilder
 from sqlalchemy import text
 from sqlmodel import Session, select
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from .database import create_db_and_tables, engine
 from .models import *
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Initiate app
 app = FastAPI()
+
+# CORS — restrict origins via ALLOWED_ORIGINS env var (comma-separated), default open for dev
+_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Security headers
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Exception handlers
 @app.exception_handler(HTTPException)
