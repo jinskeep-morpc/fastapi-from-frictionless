@@ -4,8 +4,10 @@ from os import PathLike
 
 logger = logging.getLogger(__name__)
 
-class database():
+
+class database:
     _database_logger = logging.getLogger(__name__).getChild(__qualname__)
+
     def __init__(self, folder):
 
         self.folder = folder
@@ -31,5 +33,5 @@ def create_db_and_tables():
     def save(self, filepath: str | PathLike):
 
         self.logger.info(f"Saving database file to {filepath}")
-        with open(filepath, 'w') as file:
+        with open(filepath, "w") as file:
             file.write(self.database)

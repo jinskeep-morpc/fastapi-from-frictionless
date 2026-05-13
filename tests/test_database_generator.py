@@ -1,4 +1,5 @@
 """Unit tests for the database.py code generator."""
+
 import pytest
 
 from fastapifromfrictionless import database
