@@ -156,6 +156,26 @@ def test_save_writes_file(simple_folder, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Pagination
+# ---------------------------------------------------------------------------
+
+
+def test_get_all_has_offset_param(simple_folder):
+    out = _output(simple_folder)
+    assert "offset: int = 0" in out
+
+
+def test_get_all_has_limit_param(simple_folder):
+    out = _output(simple_folder)
+    assert "limit: int = Query" in out
+
+
+def test_get_all_uses_offset_limit_in_query(simple_folder):
+    out = _output(simple_folder)
+    assert ".offset(offset).limit(limit)" in out
+
+
+# ---------------------------------------------------------------------------
 # HTTP error response handlers
 # ---------------------------------------------------------------------------
 
