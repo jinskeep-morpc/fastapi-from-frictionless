@@ -1,6 +1,8 @@
 
 # app.py
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 import fastapi
 from fastapi_querybuilder import QueryBuilder
 from sqlalchemy import text
@@ -11,6 +13,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 # Initiate app
 app = FastAPI()
+
+# Exception handlers
+@app.exception_handler(HTTPException)
+def http_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.detail, "status_code": exc.status_code},
+    )
+
+@app.exception_handler(RequestValidationError)
+def validation_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=422,
+        content={"error": "Validation error", "detail": exc.errors()},
+    )
 
 # Dependencies
 @app.on_event('startup')
