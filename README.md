@@ -83,8 +83,8 @@ Items are grouped by priority. Checked items are complete.
 - [x] Generate `database.py` with SQLite engine setup
 - [x] Excel workbook as data-entry interface (create and update)
 - [x] Frictionless package wrapping for field-level validation
-- [ ] Export API data back to Excel (dump all records to workbook)
-- [ ] Validate schemas before code generation; surface clear error messages on malformed input
+- [x] Export API data back to Excel (dump all records to workbook)
+- [x] Validate schemas before code generation; surface clear error messages on malformed input
 
 ### Code Quality & Reliability
 
