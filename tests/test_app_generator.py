@@ -1,4 +1,5 @@
 """Unit tests for the app (FastAPI endpoint) code generator."""
+
 import textwrap
 
 import pytest
@@ -12,7 +13,10 @@ def write_schema(tmp_path, name, content):
 
 @pytest.fixture()
 def simple_folder(tmp_path):
-    write_schema(tmp_path, "location", """\
+    write_schema(
+        tmp_path,
+        "location",
+        """\
         fields:
           - name: id
             type: integer
@@ -20,13 +24,17 @@ def simple_folder(tmp_path):
             type: string
         primaryKey:
           - id
-    """)
+    """,
+    )
     return tmp_path
 
 
 @pytest.fixture()
 def fk_folder(tmp_path):
-    write_schema(tmp_path, "sensor", """\
+    write_schema(
+        tmp_path,
+        "sensor",
+        """\
         fields:
           - name: id
             type: integer
@@ -34,8 +42,12 @@ def fk_folder(tmp_path):
             type: string
         primaryKey:
           - id
-    """)
-    write_schema(tmp_path, "deployment", """\
+    """,
+    )
+    write_schema(
+        tmp_path,
+        "deployment",
+        """\
         fields:
           - name: id
             type: integer
@@ -48,7 +60,8 @@ def fk_folder(tmp_path):
             reference:
               resource: sensor
               fields: [id]
-    """)
+    """,
+    )
     return tmp_path
 
 
@@ -60,6 +73,7 @@ def _output(folder):
 # ---------------------------------------------------------------------------
 # CRUD routes present
 # ---------------------------------------------------------------------------
+
 
 def test_post_route_generated(simple_folder):
     out = _output(simple_folder)
@@ -90,6 +104,7 @@ def test_delete_route_generated(simple_folder):
 # Response models
 # ---------------------------------------------------------------------------
 
+
 def test_create_uses_public_response_model(simple_folder):
     out = _output(simple_folder)
     assert "response_model=LocationPublic" in out
@@ -103,6 +118,7 @@ def test_get_all_uses_list_response_model(simple_folder):
 # ---------------------------------------------------------------------------
 # Query route only when FK present
 # ---------------------------------------------------------------------------
+
 
 def test_no_query_route_without_fk(simple_folder):
     out = _output(simple_folder)
@@ -118,6 +134,7 @@ def test_query_route_generated_with_fk(fk_folder):
 # Multiple schemas
 # ---------------------------------------------------------------------------
 
+
 def test_all_schemas_get_endpoints(fk_folder):
     out = _output(fk_folder)
     assert "/sensor" in out
@@ -127,6 +144,7 @@ def test_all_schemas_get_endpoints(fk_folder):
 # ---------------------------------------------------------------------------
 # save()
 # ---------------------------------------------------------------------------
+
 
 def test_save_writes_file(simple_folder, tmp_path):
     out = tmp_path / "app.py"
