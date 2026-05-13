@@ -105,6 +105,60 @@ def create_package(folder: str | os.PathLike, filename: str | os.PathLike, valid
         
     return package
 
+def dump_to_excel(api_url: str, schema_folder: str | os.PathLike, output_filepath: str | os.PathLike):
+    """Fetch all records from each API endpoint and write them to an Excel workbook.
+
+    One sheet per schema, columns ordered to match schema field names.  If an
+    endpoint returns no rows the sheet is still created with the correct headers
+    so the file can be re-ingested by ``update_api_from_package`` without errors.
+
+    Parameters
+    ----------
+    api_url:
+        Base URL of the running FastAPI app (e.g. ``"http://localhost:8000"``).
+    schema_folder:
+        Directory containing ``*.schema.yaml`` files.
+    output_filepath:
+        Destination path for the ``.xlsx`` file.
+    """
+    import frictionless
+    from requests import Session
+
+    schemas = sorted(
+        f for f in os.listdir(schema_folder) if f.endswith("schema.yaml")
+    )
+    session = Session()
+
+    with pd.ExcelWriter(output_filepath) as writer:
+        logger.info(f"Dumping API data to {output_filepath}")
+        for schema_file in schemas:
+            name = schema_file.replace(".schema.yaml", "")
+            endpoint = name.replace("-", "").lower()
+            schema = frictionless.Schema(os.path.join(schema_folder, schema_file))
+            columns = schema.field_names
+
+            logger.info(f"Fetching {endpoint}")
+            try:
+                df = requests_get_all(session, server_url=api_url, endpoint=endpoint)
+            except Exception as e:
+                logger.error(f"Could not fetch {endpoint}: {e}")
+                df = pd.DataFrame(columns=columns)
+
+            # Reorder/filter to match schema column order; fill missing columns with NaN
+            for col in columns:
+                if col not in df.columns:
+                    df[col] = None
+            df = df[columns]
+
+            df.to_excel(writer, sheet_name=name, index=False)
+            logger.info(f"  {len(df)} rows written to sheet '{name}'")
+
+        for sheet in writer.sheets:
+            writer.sheets[sheet].autofit()
+
+    session.close()
+
+
 def get_model(name: str, type: str):
     import models
     from sqlmodel.main import SQLModelMetaclass

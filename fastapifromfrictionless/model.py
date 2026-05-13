@@ -7,6 +7,8 @@ logger = logging.getLogger(__name__)
 
 from os import PathLike
 
+from .validate import assert_schemas_valid
+
 type_map = {
     "string": {
         "default": "str",
@@ -97,12 +99,9 @@ class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixin
         sa_type=DateTime(timezone=True)
     )
 """
-        # Validate folder
-        if not os.path.exists(folder):
-            logger.error(f"{folder} not a valid path.")
-        else:
-            self.folder = folder
-        
+        assert_schemas_valid(folder)
+        self.folder = folder
+
         # Read schemas from folder
         self.schemas = [x for x in os.listdir(folder) if x.endswith('schema.yaml')]
         logger.info(f"Building models for schemas from {folder}: {" .".join(self.schemas)}")
