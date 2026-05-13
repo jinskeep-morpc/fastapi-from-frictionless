@@ -1,3 +1,6 @@
+## 2026-05-13 — Issue #20: CI pipeline
+
+Added `.github/workflows/ci.yml` — runs `ruff check`, `ruff format --check`, and `pytest` on every push/PR. Added `[dev]` optional dependencies to `pyproject.toml` (`pip install -e ".[dev]"`). Configured ruff with `target-version = "py312"` (codebase uses 3.12 f-string syntax), `line-length = 100`, and ignores for E501/E402/F403/F401. Fixed 61 lint issues across the package and formatted all source files. All 44 tests still passing.
 ## 2026-05-13 — Issue #18: CLAUDE.md workflow refinement
 
 User updated the development workflow: removed the "ask about branch" and "ask before PR" interactive steps to support fully autonomous operation. Added a "update README roadmap" step (step 6) after writing tests. No code changes.

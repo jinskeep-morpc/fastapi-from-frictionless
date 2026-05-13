@@ -1,4 +1,5 @@
 """Unit tests for the models code generator."""
+
 import textwrap
 
 import pytest
@@ -17,7 +18,10 @@ def folder_str(p):
 
 @pytest.fixture()
 def simple_folder(tmp_path):
-    write_schema(tmp_path, "location", """\
+    write_schema(
+        tmp_path,
+        "location",
+        """\
         fields:
           - name: address
             type: string
@@ -27,13 +31,17 @@ def simple_folder(tmp_path):
             type: integer
         primaryKey:
           - address
-    """)
+    """,
+    )
     return tmp_path
 
 
 @pytest.fixture()
 def id_pk_folder(tmp_path):
-    write_schema(tmp_path, "sensor", """\
+    write_schema(
+        tmp_path,
+        "sensor",
+        """\
         fields:
           - name: id
             type: integer
@@ -43,13 +51,17 @@ def id_pk_folder(tmp_path):
               required: true
         primaryKey:
           - id
-    """)
+    """,
+    )
     return tmp_path
 
 
 @pytest.fixture()
 def fk_folder(tmp_path):
-    write_schema(tmp_path, "sensor", """\
+    write_schema(
+        tmp_path,
+        "sensor",
+        """\
         fields:
           - name: id
             type: integer
@@ -59,8 +71,12 @@ def fk_folder(tmp_path):
               required: true
         primaryKey:
           - id
-    """)
-    write_schema(tmp_path, "deployment", """\
+    """,
+    )
+    write_schema(
+        tmp_path,
+        "deployment",
+        """\
         fields:
           - name: id
             type: integer
@@ -75,13 +91,15 @@ def fk_folder(tmp_path):
             reference:
               resource: sensor
               fields: [id]
-    """)
+    """,
+    )
     return tmp_path
 
 
 # ---------------------------------------------------------------------------
 # Class name generation
 # ---------------------------------------------------------------------------
+
 
 def test_generates_all_six_model_classes(simple_folder):
     output = "".join(models(folder_str(simple_folder)).build().models)
@@ -101,6 +119,7 @@ def test_no_public_with_all_when_no_relationships(simple_folder):
 # Field optionality
 # ---------------------------------------------------------------------------
 
+
 def test_required_field_is_not_optional(simple_folder):
     output = "".join(models(folder_str(simple_folder)).build().models)
     # In the Base class, `address` is required and should appear as `str` (not optional).
@@ -118,6 +137,7 @@ def test_optional_field_is_none_union(simple_folder):
 # ---------------------------------------------------------------------------
 # Auto-increment id primary key
 # ---------------------------------------------------------------------------
+
 
 def test_id_pk_excluded_from_base(id_pk_folder):
     output = "".join(models(str(id_pk_folder)).build().models)
@@ -141,6 +161,7 @@ def test_id_included_in_public_model(id_pk_folder):
 # Foreign keys and relationships
 # ---------------------------------------------------------------------------
 
+
 def test_fk_field_has_foreign_key_annotation(fk_folder):
     output = "".join(models(str(fk_folder)).build().models)
     assert "foreign_key='sensor.id'" in output
@@ -161,6 +182,7 @@ def test_public_with_all_generated_when_relationships_exist(fk_folder):
 # Timestamp mixin
 # ---------------------------------------------------------------------------
 
+
 def test_table_model_includes_timestamp_mixin(simple_folder):
     output = "".join(models(folder_str(simple_folder)).build().models)
     assert "TimestampMixin" in output
@@ -175,6 +197,7 @@ def test_public_model_includes_timestamps(simple_folder):
 # ---------------------------------------------------------------------------
 # save()
 # ---------------------------------------------------------------------------
+
 
 def test_save_writes_file(simple_folder, tmp_path):
     out = tmp_path / "models.py"
