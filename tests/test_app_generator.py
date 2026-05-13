@@ -153,3 +153,24 @@ def test_save_writes_file(simple_folder, tmp_path):
     content = out.read_text()
     assert "FastAPI" in content
     assert "create_location" in content
+
+
+# ---------------------------------------------------------------------------
+# HTTP error response handlers
+# ---------------------------------------------------------------------------
+
+
+def test_http_exception_handler_in_saved_file(simple_folder, tmp_path):
+    out = tmp_path / "app.py"
+    app(str(simple_folder)).build().save(out)
+    content = out.read_text()
+    assert "exception_handler(HTTPException)" in content
+    assert "JSONResponse" in content
+
+
+def test_validation_exception_handler_in_saved_file(simple_folder, tmp_path):
+    out = tmp_path / "app.py"
+    app(str(simple_folder)).build().save(out)
+    content = out.read_text()
+    assert "exception_handler(RequestValidationError)" in content
+    assert "exc.errors()" in content

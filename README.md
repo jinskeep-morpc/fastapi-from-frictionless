@@ -102,7 +102,7 @@ Items are grouped by priority. Checked items are complete.
 - [ ] CORS and security headers in generated `app.py`
 - [ ] API key / token authentication ([FastAPI security](https://fastapi.tiangolo.com/tutorial/security/first-steps/))
 - [ ] Pagination on list endpoints
-- [ ] Proper HTTP error responses with consistent JSON error bodies
+- [x] Proper HTTP error responses with consistent JSON error bodies
 
 ### Developer Experience
 
