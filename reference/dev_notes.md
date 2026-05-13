@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #26: Jinja2 templating
+
+Replaced raw f-string generation in `model.py`, `app.py`, and `database.py` with Jinja2 templates in `fastapifromfrictionless/templates/`. Used custom delimiters (`<< >>` for variables, `<% %>` for blocks) to avoid conflicts with Python's `{}` syntax in generated code. All logic (FK detection, type mapping, relationship building) stays in Python; templates handle layout only. Added `jinja2` to runtime dependencies and `templates/*.jinja2` to package-data. Added `jinja2` to `pyproject.toml` runtime dependencies. All 44 tests pass; ruff and mypy clean.
+
+---
+
 ## 2026-05-13 — Issue #22: Type hints and mypy
 
 Fixed 19 mypy errors across the package: (1) renamed loop variable `field` to `field_name` in `model.py` to avoid shadowing between `str` and `frictionless.Field` types; (2) annotated `basemodel_fields: list[str]` explicitly; (3) cast `PathLike` to `str` in `logging.getChild()` calls in `model.py` and `app.py`; (4) stored `self.folder` as `str` in both generators; (5) replaced `filename.split(".")` with `pathlib.Path(filename).stem` in `load.py`. Added `[tool.mypy]` config to `pyproject.toml`, `mypy` to `[dev]` extras, and a mypy step to the CI workflow. Also fixed 51 ruff issues and reformatted all source files. mypy and all 44 tests clean.
