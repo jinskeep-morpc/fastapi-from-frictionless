@@ -88,8 +88,8 @@ Items are grouped by priority. Checked items are complete.
 
 ### Code Quality & Reliability
 
-- [ ] Add a test suite (unit tests for generators, integration tests for generated app)
-- [ ] Add CI pipeline (lint, type-check, tests on push)
+- [x] Add a test suite (unit tests for generators, integration tests for generated app)
+- [x] Add CI pipeline (lint, type-check, tests on push)
 - [ ] Enforce type hints throughout; run `mypy` in CI
 - [ ] Replace raw string generation with a templating engine (e.g. Jinja2) for maintainability
 - [ ] Structured logging with configurable verbosity
