@@ -101,7 +101,7 @@ Items are grouped by priority. Checked items are complete.
 - [ ] Configuration management — accept settings via environment variables or a config file (database URL, allowed origins, etc.)
 - [ ] CORS and security headers in generated `app.py`
 - [ ] API key / token authentication ([FastAPI security](https://fastapi.tiangolo.com/tutorial/security/first-steps/))
-- [ ] Pagination on list endpoints
+- [x] Pagination on list endpoints
 - [x] Proper HTTP error responses with consistent JSON error bodies
 
 ### Developer Experience

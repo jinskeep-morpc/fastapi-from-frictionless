@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #32: Pagination
+
+Added `offset: int = 0` and `limit: int = Query(default=100, le=1000)` parameters to all generated `GET /all` endpoints. Uses SQLModel's `.offset().limit()` chaining on the select statement. 3 tests added; all 58 pass.
+
+---
+
 ## 2026-05-13 — Issue #30: HTTP error responses
 
 Added custom `HTTPException` and `RequestValidationError` handlers to the generated `app_header.py.jinja2` template. Both return consistent JSON bodies: `{"error": ..., "status_code": ...}` for HTTP errors and `{"error": "Validation error", "detail": [...]}` for validation failures. 2 tests added; all 55 pass.
