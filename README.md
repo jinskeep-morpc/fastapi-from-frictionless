@@ -92,7 +92,7 @@ Items are grouped by priority. Checked items are complete.
 - [x] Add CI pipeline (lint, type-check, tests on push)
 - [x] Enforce type hints throughout; run `mypy` in CI
 - [ ] Replace raw string generation with a templating engine (e.g. Jinja2) for maintainability
-- [ ] Structured logging with configurable verbosity
+- [x] Structured logging with configurable verbosity
 
 ### Production Readiness
 
