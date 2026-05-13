@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #50: Default query routes
+
+Added `GET /{resource}/recent` endpoint to all generated schemas. Returns the N most recently created records ordered by `created_at.desc()`. Accepts `limit` param (default 10, max 100). Uses `TimestampMixin` which all table models already have. 3 tests added; all 82 pass.
+
+---
+
 ## 2026-05-13 — Issue #48: GET/POST Excel file endpoints
 
 Added `GET /excel/export` and `POST /excel/import` routes to the generated `app_header.py.jinja2`. Export calls `dump_to_excel()` using `API_URL` and `SCHEMA_FOLDER` env vars and returns an xlsx `FileResponse`. Import accepts an `UploadFile`, saves to a temp file, runs `create_package` + `update_api_from_package` to sync rows into the database. Added `File`, `UploadFile`, `FileResponse`, `tempfile`, and `Path` imports. 3 tests added; all 79 pass.

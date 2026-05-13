@@ -13,6 +13,11 @@ def create_<< name_lower >>(*, session: Session = Depends(get_session), << name_
 def read_<< name_lower >>s(*, session: Session = Depends(get_session), offset: int = 0, limit: int = Query(default=100, le=1000)):
     << name_lower >>s = session.exec(select(<< name >>).offset(offset).limit(limit)).all()
     return << name_lower >>s
+
+@app.get('/<< name_lower >>/recent', response_model=list[<< list_response_model >>])
+def recent_<< name_lower >>s(*, session: Session = Depends(get_session), limit: int = Query(default=10, le=100)):
+    << name_lower >>s = session.exec(select(<< name >>).order_by(<< name >>.created_at.desc()).limit(limit)).all()
+    return << name_lower >>s
 <% if has_fk %>
 
 @app.get('/<< name_lower >>/query', response_model=list[<< name >>PublicWithAll])
