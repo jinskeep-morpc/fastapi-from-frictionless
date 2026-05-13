@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #28: Structured logging
+
+Added `fastapifromfrictionless/logging_config.py` with `configure_logging(level, fmt, datefmt)`. Sets level on the `fastapifromfrictionless` package root logger, clears existing handlers on repeated calls, attaches `StreamHandler(sys.stderr)` with a default format `%(asctime)s %(levelname)-8s %(name)s — %(message)s`, and sets `propagate=False`. Accepts both string level names (case-insensitive) and integer levels; raises `ValueError` for unknown strings. Exported from `__init__.py`. 9 tests added; all 53 pass.
+
+---
+
 ## 2026-05-13 — Issue #26: Jinja2 templating
 
 Replaced raw f-string generation in `model.py`, `app.py`, and `database.py` with Jinja2 templates in `fastapifromfrictionless/templates/`. Used custom delimiters (`<< >>` for variables, `<% %>` for blocks) to avoid conflicts with Python's `{}` syntax in generated code. All logic (FK detection, type mapping, relationship building) stays in Python; templates handle layout only. Added `jinja2` to runtime dependencies and `templates/*.jinja2` to package-data. Added `jinja2` to `pyproject.toml` runtime dependencies. All 44 tests pass; ruff and mypy clean.
