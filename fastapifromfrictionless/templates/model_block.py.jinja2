@@ -1,0 +1,54 @@
+
+
+## << name >> models
+class << name >>Base(SQLModel):
+    << basemodel_fields_str >>
+
+class << name >>(<< name >>Base, TimestampMixin, table=True):
+<% if auto_id %>
+    id: int | None = Field(default=None, primary_key=True)
+<% endif %>
+<% for rel in relationships %>
+    << rel.lower() >>s: list['<< rel >>'] | None = Relationship(back_populates='<< name.lower() >>s')
+<% endfor %>
+<% for fk in fk_models %>
+    << fk.prefix >>s: list['<< fk.related >>'] | None = Relationship(back_populates='<< name.lower() >>s')
+<% endfor %>
+<% if not auto_id and not relationships and not foreign_keys %>
+    pass
+<% endif %>
+
+class << name >>Create(<< name >>Base):
+    pass
+
+class << name >>Update(<< name >>Base):
+<< update_fields_str >>
+
+class << name >>Public(<< name >>Base):
+<% if auto_id %>
+    id: int
+<% endif %>
+    created_at: datetime
+    updated_at: datetime
+<% if foreign_keys or relationships %>
+
+class << name >>PublicWithAll(<< name >>Public):
+<% for fk in fk_models %>
+    << fk.prefix >>s: List['<< fk.related >>Public'] | None = None
+<% endfor %>
+<% for rel in rel_models %>
+<% if rel.is_link %>
+    << rel.lower_name >>s: List['<< rel.name >>PublicWith<< rel.joined >>'] | None = None
+<% else %>
+    << rel.lower_name >>s: List['<< rel.name >>Public'] | None = None
+<% endif %>
+<% endfor %>
+<% endif %>
+<% if link_table %>
+<% for fk in fk_models %>
+
+class << name >>PublicWith<< fk.related >>(<< name >>Public):
+    << fk.prefix >>s: List['<< fk.related >>Public'] | None = None
+
+<% endfor %>
+<% endif %>

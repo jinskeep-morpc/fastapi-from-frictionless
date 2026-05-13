@@ -1,0 +1,27 @@
+
+from typing import Optional, List
+from uuid import UUID
+from sqlalchemy import DateTime
+from sqlmodel import Field, Relationship, SQLModel
+from datetime import date, datetime, timezone, time, timedelta
+from pydantic import EmailStr, AnyUrl, Json
+from geoalchemy2.types import Geometry
+
+def utcnow():
+    '''Returns the current time in UTC.'''
+    return datetime.now(timezone.utc)
+
+class TimestampMixin: # https://www.davidmuraya.com/blog/reusable-sqlmodel-mixins/
+    '''A mixin to add created_at and updated_at timestamp fields to a model.'''
+
+    created_at: datetime = Field(
+        default_factory=utcnow,
+        nullable=False,
+        sa_type=DateTime(timezone=True)
+    )
+    updated_at: datetime = Field(
+        default_factory=utcnow,
+        nullable=False,
+        sa_column_kwargs={"onupdate": utcnow},
+        sa_type=DateTime(timezone=True)
+    )

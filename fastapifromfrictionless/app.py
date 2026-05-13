@@ -1,7 +1,25 @@
 import logging
 import os
+from pathlib import Path
+
+import jinja2
 
 logger = logging.getLogger(__name__)
+
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+_env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(str(_TEMPLATES_DIR)),
+    variable_start_string="<<",
+    variable_end_string=">>",
+    block_start_string="<%",
+    block_end_string="%>",
+    comment_start_string="<#",
+    comment_end_string="#>",
+    trim_blocks=True,
+    lstrip_blocks=True,
+    keep_trailing_newline=True,
+)
 
 
 class app:
@@ -17,10 +35,6 @@ class app:
             The location of the schema files
 
         """
-        import os
-
-        import frictionless
-
         self.logger = (
             logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(folder))
         )
@@ -30,34 +44,6 @@ class app:
             raise ValueError
         else:
             self.folder: str = str(folder)
-
-        self.header = """
-# app.py
-from fastapi import Depends, FastAPI, HTTPException, Query
-import fastapi
-from fastapi_querybuilder import QueryBuilder
-from sqlalchemy import text
-from sqlmodel import Session, select
-from .database import create_db_and_tables, engine
-from .models import *
-from sqlalchemy.ext.asyncio import AsyncSession
-
-# Initiate app
-app = FastAPI()
-
-# Dependencies
-@app.on_event('startup')
-def on_startup():
-    create_db_and_tables()
-
-def get_session():
-    with Session(engine) as session:
-        yield session
-
-# @app.get('/')
-# def read_schema(*, session: Session = Depends(get_session)):
-#     return {name.lower()}s
-"""
 
         self.schema_paths = [x for x in os.listdir(folder) if x.endswith("schema.yaml")]
 
@@ -89,75 +75,25 @@ def get_session():
                         if fk["reference"]["resource"] == name.lower():
                             relationships.append(other_name)
 
-        post_string = f"""
-# {name} requests
-@app.post('/{name.lower()}', response_model={name}Public)
-def create_{name.lower()}(*, session: Session = Depends(get_session), {name.lower()}: {name}Create):
-    {name.lower()} = {name}.model_validate({name.lower()})
-    session.add({name.lower()})
-    session.commit()
-    session.refresh({name.lower()})
-    return {name.lower()}"""
-
+        has_relations = len(foreign_keys) > 0 or len(relationships) > 0
+        has_fk = len(foreign_keys) > 0
         pk = schema.primary_key[0]
+        name_lower = name.lower()
+        list_response_model = f"{name}PublicWithAll" if has_relations else f"{name}Public"
+        get_response_model = f"{name}PublicWithAll" if has_relations else f"{name}Public"
 
-        getall_string = f"""
-@app.get('/{name.lower()}/all', response_model=list[{f"{name}PublicWithAll" if ((len(foreign_keys) > 0) | (len(relationships) > 0)) else f"{name}Public"}])
-def read_{name.lower()}s(*, session: Session = Depends(get_session)):
-    {name.lower()}s = session.exec(select({name})).all()
-    return {name.lower()}s"""
-
-        if len(foreign_keys) > 0:
-            query_string = f"""
-@app.get('/{name.lower()}/query', response_model=list[{name}PublicWithAll])
-async def query_{name.lower()}s(*, session: AsyncSession = Depends(get_session), query=QueryBuilder({name})):
-    {name.lower()}s = session.execute(query)
-    return {name.lower()}s.scalars().all()"""
-        else:
-            query_string = ""
-
-        get_string = f"""
-@app.get('/{name.lower()}/{{{name.lower()}_{pk}}}', response_model={f"{name}PublicWithAll" if ((len(foreign_keys) > 0) | (len(relationships) > 0)) else f"{name}Public"})
-def read_{name.lower()}(*, session: Session = Depends(get_session), {name.lower()}_{pk}: str):
-    {name.lower()} = session.get({name}, {name.lower()}_{pk})
-    if not {name.lower()}:
-        raise HTTPException(status_code=404, detail='{name} not found.')
-    return {name.lower()}"""
-
-        update_string = f"""
-@app.patch('/{name.lower()}/{{{name.lower()}_{pk}}}', response_model={name}Public)
-def update_{name.lower()}(*, session: Session = Depends(get_session), {name.lower()}_{pk}: str, {name.lower()}: {name}Update):
-    db_{name.lower()} = session.get({name}, {name.lower()}_{pk})
-    if not db_{name.lower()}:
-        raise HTTPException(status_code=404, detail=f'{name} {{{name.lower()}_{pk}}} not found.')
-    {name.lower()}_data = {name.lower()}.model_dump(exclude_unset=True)
-    db_{name.lower()}.sqlmodel_update({name.lower()}_data)
-    session.add(db_{name.lower()})
-    session.commit()
-    session.refresh(db_{name.lower()})
-    return db_{name.lower()}"""
-
-        delete_string = f"""
-@app.delete('/{name.lower()}/{{{name.lower()}_{pk}}}')
-def delete_{name.lower()}(*, session: Session = Depends(get_session), {name.lower()}_{pk}: str):
-    {name.lower()} = session.get({name}, {name.lower()}_{pk})
-    if not {name.lower()}:
-        raise HTTPException(status_code=404, detail=f'{name} {{{name.lower()}_{pk}}} not found.')
-    session.delete({name.lower()})
-    session.commit()
-    return {{'ok': True}}"""
-
-        endpoint_file = f"""
-        {post_string}
-        {getall_string}
-        {get_string}
-        {query_string}
-        {update_string}
-        {delete_string}
-        """
-
-        return endpoint_file
+        template = _env.get_template("endpoint_block.py.jinja2")
+        return template.render(
+            name=name,
+            name_lower=name_lower,
+            pk=pk,
+            has_fk=has_fk,
+            has_relations=has_relations,
+            list_response_model=list_response_model,
+            get_response_model=get_response_model,
+        )
 
     def save(self, filepath: str | os.PathLike):
+        header = _env.get_template("app_header.py.jinja2").render()
         with open(filepath, "w") as file:
-            file.write("".join([self.header] + self.endpoints))
+            file.write(header + "".join(self.endpoints))

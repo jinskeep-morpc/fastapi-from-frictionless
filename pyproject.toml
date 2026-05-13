@@ -23,7 +23,8 @@ dependencies = [
     "FastAPI",
     "fastapi_querybuilder",
     "sqlalchemy",
-    "xlsxwriter"
+    "xlsxwriter",
+    "jinja2",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +47,7 @@ namespaces = false
 
 [tool.setuptools.package-data]
 "*" = ["*.json"]
+fastapifromfrictionless = ["templates/*.jinja2"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

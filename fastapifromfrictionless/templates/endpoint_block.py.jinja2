@@ -1,0 +1,50 @@
+
+
+# << name >> requests
+@app.post('/<< name_lower >>', response_model=<< name >>Public)
+def create_<< name_lower >>(*, session: Session = Depends(get_session), << name_lower >>: << name >>Create):
+    << name_lower >> = << name >>.model_validate(<< name_lower >>)
+    session.add(<< name_lower >>)
+    session.commit()
+    session.refresh(<< name_lower >>)
+    return << name_lower >>
+
+@app.get('/<< name_lower >>/all', response_model=list[<< list_response_model >>])
+def read_<< name_lower >>s(*, session: Session = Depends(get_session)):
+    << name_lower >>s = session.exec(select(<< name >>)).all()
+    return << name_lower >>s
+<% if has_fk %>
+
+@app.get('/<< name_lower >>/query', response_model=list[<< name >>PublicWithAll])
+async def query_<< name_lower >>s(*, session: AsyncSession = Depends(get_session), query=QueryBuilder(<< name >>)):
+    << name_lower >>s = session.execute(query)
+    return << name_lower >>s.scalars().all()
+<% endif %>
+
+@app.get('/<< name_lower >>/{<< name_lower >>_<< pk >>}', response_model=<< get_response_model >>)
+def read_<< name_lower >>(*, session: Session = Depends(get_session), << name_lower >>_<< pk >>: str):
+    << name_lower >> = session.get(<< name >>, << name_lower >>_<< pk >>)
+    if not << name_lower >>:
+        raise HTTPException(status_code=404, detail='<< name >> not found.')
+    return << name_lower >>
+
+@app.patch('/<< name_lower >>/{<< name_lower >>_<< pk >>}', response_model=<< name >>Public)
+def update_<< name_lower >>(*, session: Session = Depends(get_session), << name_lower >>_<< pk >>: str, << name_lower >>: << name >>Update):
+    db_<< name_lower >> = session.get(<< name >>, << name_lower >>_<< pk >>)
+    if not db_<< name_lower >>:
+        raise HTTPException(status_code=404, detail=f'<< name >> {<< name_lower >>_<< pk >>} not found.')
+    << name_lower >>_data = << name_lower >>.model_dump(exclude_unset=True)
+    db_<< name_lower >>.sqlmodel_update(<< name_lower >>_data)
+    session.add(db_<< name_lower >>)
+    session.commit()
+    session.refresh(db_<< name_lower >>)
+    return db_<< name_lower >>
+
+@app.delete('/<< name_lower >>/{<< name_lower >>_<< pk >>}')
+def delete_<< name_lower >>(*, session: Session = Depends(get_session), << name_lower >>_<< pk >>: str):
+    << name_lower >> = session.get(<< name >>, << name_lower >>_<< pk >>)
+    if not << name_lower >>:
+        raise HTTPException(status_code=404, detail=f'<< name >> {<< name_lower >>_<< pk >>} not found.')
+    session.delete(<< name_lower >>)
+    session.commit()
+    return {'ok': True}
