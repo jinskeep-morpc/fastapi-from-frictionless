@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #42: Dry-run / preview mode
+
+Added `--dry-run` flag to the CLI `generate` subcommand. When set, generated file contents are printed to stdout (with `===` separators per file) instead of written to disk. Reuses the same Jinja2 environment and generator objects, just routes output to print instead of file.write. 4 tests added; all 73 pass.
+
+---
+
 ## 2026-05-13 — Issue #40: API key authentication
 
 Added `X-API-Key` header authentication to the generated `app_header.py.jinja2` template using FastAPI's `APIKeyHeader` and `Security`. If `API_KEY` env var is set, all requests must include a matching header (returns 403 otherwise). If unset, auth is disabled (dev-friendly default). Applied globally via `FastAPI(dependencies=[Depends(verify_api_key)])`. 2 tests added; all 69 pass.
