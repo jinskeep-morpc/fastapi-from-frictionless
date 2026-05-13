@@ -117,5 +117,5 @@ Items are grouped by priority. Checked items are complete.
 - [x] Support for PostgreSQL and other SQLAlchemy-compatible backends
 - [ ] Auto-generated front-end form from schema fields
 - [ ] DrawIO ERD → Frictionless schema converter
-- [ ] Default query routes for common patterns derived from schema metadata
+- [x] Default query routes for common patterns derived from schema metadata
 - [x] GET/POST file endpoints for uploading and downloading the Excel workbook directly via the API
