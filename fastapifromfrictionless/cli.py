@@ -9,15 +9,44 @@ def _generate(args):
     from .database import database
     from .model import models
 
+    models_gen = models(args.schema_folder).build()
+    app_gen = app(args.schema_folder).build()
+    db_gen = database(args.schema_folder).build(args.db_filename)
+
+    if args.dry_run:
+        _print_preview("models.py", models_gen)
+        _print_preview("app.py", app_gen)
+        _print_preview("database.py", db_gen)
+        return
+
     out = pathlib.Path(args.output)
     out.mkdir(parents=True, exist_ok=True)
 
-    models(args.schema_folder).build().save(out / "models.py")
-    app(args.schema_folder).build().save(out / "app.py")
-    database(args.schema_folder).build(args.db_filename).save(out / "database.py")
+    models_gen.save(out / "models.py")
+    app_gen.save(out / "app.py")
+    db_gen.save(out / "database.py")
     (out / "__init__.py").touch()
 
     print(f"Generated app.py, models.py, database.py in {out}")
+
+
+def _print_preview(filename, generator):
+    print(f"\n{'=' * 60}")
+    print(f"# {filename}")
+    print(f"{'=' * 60}")
+    if hasattr(generator, "models"):
+        # models generator stores header separately
+        from .model import _env
+
+        header = _env.get_template("models_header.py.jinja2").render()
+        print(header + "".join(generator.models))
+    elif hasattr(generator, "endpoints"):
+        from .app import _env
+
+        header = _env.get_template("app_header.py.jinja2").render()
+        print(header + "".join(generator.endpoints))
+    else:
+        print(generator.database)
 
 
 def main(argv=None):
@@ -42,6 +71,12 @@ def main(argv=None):
         dest="db_filename",
         default="database.db",
         help="SQLite database filename (default: database.db).",
+    )
+    gen.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="Print generated file contents to stdout without writing files.",
     )
     gen.set_defaults(func=_generate)
 
