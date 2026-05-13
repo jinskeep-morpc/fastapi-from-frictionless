@@ -1,10 +1,12 @@
-import os
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
-class app():
+
+class app:
     _app_logger = logger.getChild(__qualname__)
+
     def __init__(self, folder: str | os.PathLike):
         """
         Create a app.py file based on all frictionless schemas in a folder.
@@ -13,18 +15,21 @@ class app():
         -----------
         folder : str | Pathlike
             The location of the schema files
-        
+
         """
         import os
+
         import frictionless
 
-        self.logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(folder)
+        self.logger = (
+            logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(folder))
+        )
 
         if not os.path.exists(folder):
             self.logger.error(f"{folder} does not exist.")
             raise ValueError
         else:
-            self.folder = folder
+            self.folder: str = str(folder)
 
         self.header = """
 # app.py
@@ -48,13 +53,13 @@ def on_startup():
 def get_session():
     with Session(engine) as session:
         yield session
-        
+
 # @app.get('/')
 # def read_schema(*, session: Session = Depends(get_session)):
 #     return {name.lower()}s
 """
 
-        self.schema_paths = [x for x in os.listdir(folder) if x.endswith('schema.yaml')]
+        self.schema_paths = [x for x in os.listdir(folder) if x.endswith("schema.yaml")]
 
     def build(self):
         self.endpoints = []
@@ -68,21 +73,21 @@ def get_session():
         import frictionless
 
         filepath = os.path.join(self.folder, filename)
-        name = filename.split('.')[0].replace('-', ' ').title().replace(' ', '')
+        name = filename.split(".")[0].replace("-", " ").title().replace(" ", "")
         schema = frictionless.Schema(filepath)
 
-        foreign_keys = [x['fields'][0] for x in schema.foreign_keys]
+        foreign_keys = [x["fields"][0] for x in schema.foreign_keys]
 
         relationships = []
         for other_filename in self.schema_paths:
             if other_filename != filename:
                 other_filepath = os.path.join(self.folder, other_filename)
-                other_name = other_filename.split('.')[0].replace('-', ' ').title().replace(' ', '')
+                other_name = other_filename.split(".")[0].replace("-", " ").title().replace(" ", "")
                 other_schema = frictionless.Schema(other_filepath)
                 if len(other_schema.foreign_keys) > 0:
                     for fk in other_schema.foreign_keys:
-                        if fk['reference']['resource'] == name.lower():
-                            relationships.append(other_name)   
+                        if fk["reference"]["resource"] == name.lower():
+                            relationships.append(other_name)
 
         post_string = f"""
 # {name} requests
@@ -97,11 +102,10 @@ def create_{name.lower()}(*, session: Session = Depends(get_session), {name.lowe
         pk = schema.primary_key[0]
 
         getall_string = f"""
-@app.get('/{name.lower()}/all', response_model=list[{f'{name}PublicWithAll' if ((len(foreign_keys)>0)|(len(relationships)>0)) else f'{name}Public'}])
+@app.get('/{name.lower()}/all', response_model=list[{f"{name}PublicWithAll" if ((len(foreign_keys) > 0) | (len(relationships) > 0)) else f"{name}Public"}])
 def read_{name.lower()}s(*, session: Session = Depends(get_session)):
     {name.lower()}s = session.exec(select({name})).all()
     return {name.lower()}s"""
-
 
         if len(foreign_keys) > 0:
             query_string = f"""
@@ -113,7 +117,7 @@ async def query_{name.lower()}s(*, session: AsyncSession = Depends(get_session),
             query_string = ""
 
         get_string = f"""
-@app.get('/{name.lower()}/{{{name.lower()}_{pk}}}', response_model={f'{name}PublicWithAll' if ((len(foreign_keys)>0)|(len(relationships)>0)) else f'{name}Public'})
+@app.get('/{name.lower()}/{{{name.lower()}_{pk}}}', response_model={f"{name}PublicWithAll" if ((len(foreign_keys) > 0) | (len(relationships) > 0)) else f"{name}Public"})
 def read_{name.lower()}(*, session: Session = Depends(get_session), {name.lower()}_{pk}: str):
     {name.lower()} = session.get({name}, {name.lower()}_{pk})
     if not {name.lower()}:
@@ -155,5 +159,5 @@ def delete_{name.lower()}(*, session: Session = Depends(get_session), {name.lowe
         return endpoint_file
 
     def save(self, filepath: str | os.PathLike):
-        with open(filepath, 'w') as file:
+        with open(filepath, "w") as file:
             file.write("".join([self.header] + self.endpoints))

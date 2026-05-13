@@ -1,4 +1,5 @@
 """Schema validation for fastapifromfrictionless generators."""
+
 import logging
 import os
 from os import PathLike
