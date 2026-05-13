@@ -176,6 +176,28 @@ def test_get_all_uses_offset_limit_in_query(simple_folder):
 
 
 # ---------------------------------------------------------------------------
+# CORS and security headers
+# ---------------------------------------------------------------------------
+
+
+def test_cors_middleware_in_saved_file(simple_folder, tmp_path):
+    out = tmp_path / "app.py"
+    app(str(simple_folder)).build().save(out)
+    content = out.read_text()
+    assert "CORSMiddleware" in content
+    assert "ALLOWED_ORIGINS" in content
+
+
+def test_security_headers_middleware_in_saved_file(simple_folder, tmp_path):
+    out = tmp_path / "app.py"
+    app(str(simple_folder)).build().save(out)
+    content = out.read_text()
+    assert "SecurityHeadersMiddleware" in content
+    assert "X-Content-Type-Options" in content
+    assert "X-Frame-Options" in content
+
+
+# ---------------------------------------------------------------------------
 # HTTP error response handlers
 # ---------------------------------------------------------------------------
 
