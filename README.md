@@ -114,7 +114,7 @@ Items are grouped by priority. Checked items are complete.
 
 ### Optional / Future
 
-- [ ] Support for PostgreSQL and other SQLAlchemy-compatible backends
+- [x] Support for PostgreSQL and other SQLAlchemy-compatible backends
 - [ ] Auto-generated front-end form from schema fields
 - [ ] DrawIO ERD → Frictionless schema converter
 - [ ] Default query routes for common patterns derived from schema metadata
