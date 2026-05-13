@@ -92,6 +92,27 @@ def test_dry_run_prints_app(schema_folder, tmp_path, capsys):
     assert "FastAPI" in captured.out
 
 
+def test_no_models_skips_models_py(schema_folder, tmp_path):
+    out = tmp_path / "out"
+    main(["generate", str(schema_folder), "--output", str(out), "--no-models"])
+    assert not (out / "models.py").exists()
+    assert (out / "app.py").exists()
+
+
+def test_no_app_skips_app_py(schema_folder, tmp_path):
+    out = tmp_path / "out"
+    main(["generate", str(schema_folder), "--output", str(out), "--no-app"])
+    assert not (out / "app.py").exists()
+    assert (out / "models.py").exists()
+
+
+def test_no_db_skips_database_py(schema_folder, tmp_path):
+    out = tmp_path / "out"
+    main(["generate", str(schema_folder), "--output", str(out), "--no-db"])
+    assert not (out / "database.py").exists()
+    assert (out / "models.py").exists()
+
+
 def test_dry_run_prints_database(schema_folder, tmp_path, capsys):
     out = tmp_path / "out"
     main(["generate", str(schema_folder), "--output", str(out), "--dry-run"])

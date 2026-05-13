@@ -1,3 +1,9 @@
+## 2026-05-13 — Issue #44: Configurable output
+
+Added `--no-models`, `--no-app`, `--no-db` flags to the CLI `generate` subcommand. Each defaults to False (all files generated). Useful when iterating on schemas after initial setup to regenerate only the changed file. 3 tests added; all 76 pass.
+
+---
+
 ## 2026-05-13 — Issue #42: Dry-run / preview mode
 
 Added `--dry-run` flag to the CLI `generate` subcommand. When set, generated file contents are printed to stdout (with `===` separators per file) instead of written to disk. Reuses the same Jinja2 environment and generator objects, just routes output to print instead of file.write. 4 tests added; all 73 pass.
