@@ -33,7 +33,7 @@ type_map = {
     "duration": {"default": "timedelta"},
     "geopoint": {"default": "Geometry('POINT')"},
     "geojson": {"default": "Geometry('GEOMETRY')"},
-    "any": {"default": "Any"},
+    "any": {"default": "str"},
 }
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
