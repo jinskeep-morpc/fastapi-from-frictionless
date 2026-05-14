@@ -1,3 +1,6 @@
+## 2026-05-14 — Fix create_package absolute path rejected as unsafe by frictionless (#103)
+
+frictionless rejects absolute paths during package.validate(). Changed create_package to chdir to the Excel file's directory and reference it by relative basename. Schema files and output YAML accessed via absolute paths resolved from the schema folder.
 ## 2026-05-14 — Fix create_package FK error during standalone resource.infer() (#101)
 
 frictionless raises 'package is required for foreign keys' when infer() is called on a standalone TableResource with FK constraints. Strip foreignKeys from schema descriptor before infer; FK validation still happens at package level when validate=True.
