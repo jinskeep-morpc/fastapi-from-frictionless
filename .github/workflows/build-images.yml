@@ -1,10 +1,16 @@
 name: Build and push base images
 
 # Runs after "Publish to PyPI" completes so pip install gets the new version.
+# Can also be triggered manually with an explicit version tag.
 on:
   workflow_run:
     workflows: ["Publish to PyPI"]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to apply (e.g. 0.2.3)"
+        required: true
 
 env:
   REGISTRY: ghcr.io
@@ -13,8 +19,9 @@ env:
 
 jobs:
   build-and-push:
-    # Only run when the publish workflow succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # For workflow_run: only run when publish succeeded.
+    # For workflow_dispatch: always run.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || github.event.workflow_run.head_sha }}
 
       - name: Log in to ghcr.io
         uses: docker/login-action@v3
@@ -32,11 +39,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract version from release tag
+      - name: Resolve version tag
         id: version
         run: |
-          TAG="${{ github.event.workflow_run.head_branch }}"
-          echo "tag=${TAG#v}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            TAG="${{ github.event.workflow_run.head_branch }}"
+            echo "tag=${TAG#v}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build and push generator base image
         uses: docker/build-push-action@v6
