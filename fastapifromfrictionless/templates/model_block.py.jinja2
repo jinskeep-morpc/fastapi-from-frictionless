@@ -2,7 +2,11 @@
 
 ## << name >> models
 class << name >>Base(SQLModel):
+<% if basemodel_fields_str %>
     << basemodel_fields_str >>
+<% else %>
+    pass
+<% endif %>
 
 class << name >>(<< name >>Base, TimestampMixin, table=True):
 <% if auto_id %>
@@ -22,7 +26,11 @@ class << name >>Create(<< name >>Base):
     pass
 
 class << name >>Update(<< name >>Base):
+<% if update_fields_str %>
 << update_fields_str >>
+<% else %>
+    pass
+<% endif %>
 
 class << name >>Public(<< name >>Base):
 <% if auto_id %>
