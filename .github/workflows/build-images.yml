@@ -1,0 +1,51 @@
+name: Build and push base images
+
+on:
+  release:
+    types: [published]
+
+env:
+  REGISTRY: ghcr.io
+  GENERATOR_IMAGE: ghcr.io/${{ github.repository_owner }}/fastapi-from-frictionless-generator
+  RUNTIME_IMAGE: ghcr.io/${{ github.repository_owner }}/fastapi-from-frictionless-runtime
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from release tag
+        id: version
+        run: echo "tag=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push generator base image
+        uses: docker/build-push-action@v6
+        with:
+          context: podman
+          file: podman/Dockerfile.generator-base
+          push: true
+          tags: |
+            ${{ env.GENERATOR_IMAGE }}:latest
+            ${{ env.GENERATOR_IMAGE }}:${{ steps.version.outputs.tag }}
+
+      - name: Build and push runtime base image
+        uses: docker/build-push-action@v6
+        with:
+          context: podman
+          file: podman/Dockerfile.runtime-base
+          push: true
+          tags: |
+            ${{ env.RUNTIME_IMAGE }}:latest
+            ${{ env.RUNTIME_IMAGE }}:${{ steps.version.outputs.tag }}

@@ -71,15 +71,17 @@ API_URL=http://localhost:8000
 
 The API image uses a **two-stage build**: Stage 1 generates the FastAPI application from your schemas; Stage 2 produces a lean runtime image without the generation tools.
 
+Both stages pull **pre-built base images** from ghcr.io that already have all Python dependencies installed. Your build only runs the `COPY` and code-generation steps — no pip installs.
+
 ```bash
-# Build the API image (reads schemas/ and generates the app code)
+# Build the API image (pulls pre-built bases, copies schemas, generates app code)
 podman-compose build api
 
 # Start all three services
 podman-compose up -d
 ```
 
-The first run pulls the PostGIS and pgAdmin images and builds the API image (~3–5 minutes). Subsequent builds are fast because the heavy pip install layer is cached.
+The first run pulls the PostGIS, pgAdmin, and pre-built base images (~1–2 min on a fast connection). Subsequent builds are very fast — the base images are cached locally.
 
 On startup the API container:
 
@@ -149,6 +151,25 @@ The PostgreSQL service is exposed on port 5432. Connect from the host with:
 
 ```bash
 psql -h localhost -p 5432 -U postgres -d mydb
+```
+
+## Pre-built base images
+
+The `Dockerfile` references two images published to the GitHub Container Registry:
+
+| Image | Tag | Purpose |
+|-------|-----|---------|
+| `ghcr.io/jinskeep-morpc/fastapi-from-frictionless-generator` | `latest` | Stage 1 base — `python:3.12-slim` + `fastapifromfrictionless[generate]` |
+| `ghcr.io/jinskeep-morpc/fastapi-from-frictionless-runtime` | `latest` | Stage 2 base — `python:3.12-slim` + `fastapifromfrictionless` + `uvicorn` + `psycopg2-binary` |
+
+These images are rebuilt automatically on each GitHub release via `.github/workflows/build-images.yml`. Both `latest` and version-pinned tags (e.g. `0.2.0`) are published.
+
+To pin to a specific version, edit the `FROM` lines in `Dockerfile`:
+
+```dockerfile
+FROM ghcr.io/jinskeep-morpc/fastapi-from-frictionless-generator:0.2.0 AS generator
+...
+FROM ghcr.io/jinskeep-morpc/fastapi-from-frictionless-runtime:0.2.0
 ```
 
 ## Network layout

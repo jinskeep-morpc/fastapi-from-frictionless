@@ -1,12 +1,10 @@
 # Stage 1 — generate the FastAPI application from schemas
 #
-# Installs the full [generate] extras (includes frictionless + jinja2) and
-# runs the CLI against the schemas/ folder.  Nothing from this stage carries
-# into the final image.
-FROM python:3.12-slim AS generator
+# Uses the pre-built generator image (deps already installed).
+# Copies schemas into /schemas and runs the CLI to produce /generator/api/.
+# Nothing from this stage carries into the final image.
+FROM ghcr.io/jinskeep-morpc/fastapi-from-frictionless-generator:latest AS generator
 ARG SCHEMA_FOLDER=schemas
-WORKDIR /generator
-RUN pip install --no-cache-dir "fastapifromfrictionless[generate]"
 COPY ${SCHEMA_FOLDER}/ /schemas/
 RUN mkdir -p /generator/api && \
     python -m fastapifromfrictionless.cli generate /schemas --output /generator/api && \
@@ -14,17 +12,10 @@ RUN mkdir -p /generator/api && \
 
 # Stage 2 — lean runtime image
 #
-# Installs only the packages the generated app needs at runtime.
-# frictionless and jinja2 are intentionally excluded — they are only
-# required for code generation, which already happened in Stage 1.
-FROM python:3.12-slim
-WORKDIR /app
-RUN pip install --no-cache-dir \
-    fastapifromfrictionless \
-    "uvicorn[standard]" \
-    psycopg2-binary
-
-# Copy the pre-generated app from the generator stage
+# Uses the pre-built runtime image (deps already installed).
+# frictionless and jinja2 are intentionally excluded — code generation
+# already happened in Stage 1.
+FROM ghcr.io/jinskeep-morpc/fastapi-from-frictionless-runtime:latest
 COPY --from=generator /generator/api/ /app/api/
 
 EXPOSE 8000
