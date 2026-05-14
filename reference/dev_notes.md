@@ -1,3 +1,6 @@
+## 2026-05-14 — Fix NameError: Any not imported in generated models header (#85)
+
+The models_header.py.jinja2 template imported Optional and List from typing but not Any, causing NameError at startup for schemas with field types 'any', 'object', or 'array'. Added Any to the import. 90 tests passing.
 ## 2026-05-14 — Fix geoalchemy2 missing dependency (#81)
 
 Schemas without geo field types raised ModuleNotFoundError because models_header.py.jinja2 unconditionally imported from geoalchemy2. Added has_geo tracking in model.build() and made the import conditional in the template. Also added geoalchemy2 to pyproject.toml base dependencies and podman/Dockerfile.runtime-base so the runtime image includes it. 89 tests passing.
