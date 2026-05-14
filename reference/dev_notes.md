@@ -1,3 +1,6 @@
+## 2026-05-14 — Fix frictionless missing from runtime dependencies (#97)
+
+The Excel export/import endpoints use frictionless to read schema files for column headers and data loading. frictionless was only in the [generate] optional extra but is also needed at runtime. Added to pyproject.toml base deps and Dockerfile.runtime-base.
 ## 2026-05-14 — Fix generator imports crashing runtime via __init__.py (#95)
 
 Generator classes (app, database, model, validate) all require jinja2/frictionless from the [generate] extra. But __init__.py imported them unconditionally, so import fastapifromfrictionless failed in runtime environments. Wrapped generator imports in try/except ImportError so the base package is importable without the extra. 90 tests passing.

@@ -26,6 +26,7 @@ dependencies = [
     "xlsxwriter",
     "geoalchemy2",
     "python-multipart",
+    "frictionless",
 ]
 
 [project.optional-dependencies]
