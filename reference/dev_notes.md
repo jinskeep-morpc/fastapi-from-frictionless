@@ -1,3 +1,6 @@
+## 2026-05-14 — Pin package version in base image builds to avoid PyPI CDN lag (#91)
+
+The Dockerfiles for base images installed fastapifromfrictionless without a version pin. When build-images.yml fired right after the PyPI publish, pip sometimes got the previous cached version. Added ARG PACKAGE_VERSION to both Dockerfiles and a PyPI polling step in the workflow that retries up to 12 minutes before starting the Docker builds. The workflow also now passes build-args: PACKAGE_VERSION=... to both builds.
 ## 2026-05-14 — Fix Frictionless 'any' type → typing.Any has no SQLAlchemy mapping (#89)
 
 Frictionless 'any' type was mapped to typing.Any in the type_map, but typing.Any has no SQLAlchemy column type, causing ValueError at startup for any schema with an 'any' field. Changed mapping to 'str' (stored as text). Updated the corresponding test. 90 tests passing.
