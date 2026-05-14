@@ -197,7 +197,7 @@ def requests_post(
         session = requests.Session()
     logger.debug(f"Posting {model.model_dump_json()} to {server_url}/{endpoint}.")
     r = session.post(f"{os.path.join(server_url, endpoint)}", data=model.model_dump_json())
-    logger.debug(f"{r.content}")
+    logger.debug(r.content.decode("utf-8", errors="replace"))
     r.raise_for_status()
     json = r.json()
     r.close()

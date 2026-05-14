@@ -1,6 +1,6 @@
 # compose.yaml
 #
-# Two services: PostGIS database and the generated FastAPI application.
+# Three services: PostGIS database, pgAdmin web UI, and the generated FastAPI application.
 # Copy this file, Dockerfile, entrypoint.sh, and .env.example to your
 # deployment folder, then follow the README to get started.
 
@@ -26,6 +26,24 @@ services:
       timeout: 5s
       retries: 5
 
+  pgadmin:
+    image: docker.io/dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+    volumes:
+      - ./pgadmin:/var/lib/pgadmin:Z
+    ports:
+      - 8080:80
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      app_network:
+        ipv4_address: 10.91.0.6
+        aliases:
+          - pgadmin
+
   api:
     build:
       context: .
@@ -45,7 +63,7 @@ services:
         condition: service_healthy
     networks:
       app_network:
-        ipv4_address: 10.91.0.6
+        ipv4_address: 10.91.0.7
         aliases:
           - api
 
