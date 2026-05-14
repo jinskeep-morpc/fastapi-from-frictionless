@@ -183,7 +183,7 @@ Items are grouped by priority. Checked items are complete.
 ### Optional / Future
 
 - [x] Support for PostgreSQL and other SQLAlchemy-compatible backends
-- [x] Podman/container deployment (compose.yaml + Dockerfile + PostGIS)
+- [x] Podman/container deployment (Compose stack with PostGIS, pgAdmin, and FastAPI; multi-stage Dockerfile with pre-built base images on ghcr.io for fast builds)
 - [ ] Auto-generated front-end form from schema fields
 - [ ] DrawIO ERD → Frictionless schema converter
 - [x] Default query routes for common patterns derived from schema metadata
