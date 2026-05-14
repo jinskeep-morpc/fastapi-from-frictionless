@@ -4,8 +4,6 @@ import logging
 import os
 from os import PathLike
 
-import frictionless
-
 logger = logging.getLogger(__name__)
 
 
@@ -22,6 +20,8 @@ def validate_schemas(folder: str | PathLike) -> list[str]:
     - Foreign key references point to an existing schema in the folder (cross-schema
       consistency that frictionless cannot verify on its own)
     """
+    import frictionless
+
     errors: list[str] = []
 
     if not os.path.isdir(folder):

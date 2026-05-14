@@ -2,8 +2,6 @@ import logging
 import pathlib
 import stat
 
-import frictionless.errors
-from frictionless import Dialect, Validator
 from pydantic import ValidationError
 from requests import HTTPError, JSONDecodeError, Session
 
@@ -61,9 +59,7 @@ def empty_excel(schema_folder, output_filepath):
             writer.sheets[sheet].autofit()
 
 
-def create_package(
-    folder: str | os.PathLike, filename: str | os.PathLike, validate: bool = True
-) -> "frictionless.Package":
+def create_package(folder: str | os.PathLike, filename: str | os.PathLike, validate: bool = True):
     import os
     from contextlib import chdir
     from datetime import datetime
