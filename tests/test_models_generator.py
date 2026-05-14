@@ -277,6 +277,12 @@ def test_any_type_maps_to_Any(any_yearmonth_folder, tmp_path):
     assert "payload: Any" in out.read_text()
 
 
+def test_header_imports_Any(simple_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(simple_folder)).build().save(out)
+    assert "from typing import Any" in out.read_text()
+
+
 def test_yearmonth_type_maps_to_str(any_yearmonth_folder, tmp_path):
     out = tmp_path / "models.py"
     models(folder_str(any_yearmonth_folder)).build().save(out)
