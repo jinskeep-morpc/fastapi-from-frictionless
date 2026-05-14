@@ -1,3 +1,9 @@
+## 2026-05-14 — Issue #60: Multi-stage Dockerfile
+
+Moved `frictionless` and `jinja2` to an optional `[generate]` extra in `pyproject.toml` (also added both to `[dev]` so CI tests still pass). Made `validate.py` frictionless import lazy (moved inside functions). Removed dead top-level frictionless imports from `load.py`. Two-stage `podman/Dockerfile`: Stage 1 installs `fastapifromfrictionless[generate]`, copies `schemas/`, and generates the app code; Stage 2 installs the slim base (no frictionless/jinja2) and runs uvicorn against the pre-built code. Simplified `entrypoint.sh` (no generation step). Updated `podman/README.md` to document the new build-time generation workflow.
+
+---
+
 ## 2026-05-14 — Issue #58: Replace doc/ with quickstart notebook
 
 Removed all legacy content from `doc/` (two devlog notebooks, stale generated Python files pre-dating the Jinja2 templates, `__pycache__`, `.log`, `.db`). Created `doc/quickstart.ipynb`: a 9-step narrative walkthrough of the podman deployment workflow — define schemas (Python cells writing YAML), configure `.env`, start the stack (`podman-compose up -d`), explore the API (requests cells that work against a live stack), browse with pgAdmin, Excel import/export, schema updates, and cleanup. Shell commands shown inline in markdown; no attempt to run podman from within the notebook.
