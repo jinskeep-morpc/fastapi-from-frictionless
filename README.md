@@ -161,6 +161,7 @@ Items are grouped by priority. Checked items are complete.
 - [x] Enforce type hints throughout; run `mypy` in CI
 - [x] Replace raw string generation with a templating engine (e.g. Jinja2) for maintainability
 - [x] Structured logging with configurable verbosity
+- [x] Complete Frictionless field type coverage — all standard types map to concrete Python/SQLAlchemy types; `geoalchemy2` import emitted only when geo types are present; unknown types fall back gracefully
 
 ### Production Readiness
 
@@ -183,7 +184,8 @@ Items are grouped by priority. Checked items are complete.
 ### Optional / Future
 
 - [x] Support for PostgreSQL and other SQLAlchemy-compatible backends
-- [x] Podman/container deployment (Compose stack with PostGIS, pgAdmin, and FastAPI; multi-stage Dockerfile with pre-built base images on ghcr.io for fast builds)
+- [x] Podman/container deployment (Compose stack with PostGIS, pgAdmin, and FastAPI; multi-stage Dockerfile with pre-built base images on ghcr.io; version-pinned builds with PyPI availability polling to prevent CDN lag)
+- [x] All runtime dependencies declared in base package (`frictionless`, `python-multipart`, `geoalchemy2`) — generated app works out of the box without extras
 - [ ] Auto-generated front-end form from schema fields
 - [ ] DrawIO ERD → Frictionless schema converter
 - [x] Default query routes for common patterns derived from schema metadata
