@@ -1,3 +1,6 @@
+## 2026-05-14 — Fix frictionless[excel] missing openpyxl for Excel import (#99)
+
+frictionless base install does not include openpyxl (needed to read .xlsx files). Changed from frictionless to frictionless[excel] in pyproject.toml and Dockerfile.runtime-base.
 ## 2026-05-14 — Fix frictionless missing from runtime dependencies (#97)
 
 The Excel export/import endpoints use frictionless to read schema files for column headers and data loading. frictionless was only in the [generate] optional extra but is also needed at runtime. Added to pyproject.toml base deps and Dockerfile.runtime-base.
