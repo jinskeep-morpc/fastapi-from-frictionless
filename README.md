@@ -120,7 +120,7 @@ Options:
   --no-db           Skip generating database.py
 ```
 
-See `doc/` for a worked example with real schemas and generated output.
+See [`doc/quickstart.ipynb`](doc/quickstart.ipynb) for a step-by-step walkthrough of the full deployment workflow.
 
 ## Deployment
 
