@@ -65,17 +65,17 @@ uvicorn app:app --reload
 
 ### 3. Generated endpoints
 
-For each schema resource, the generated app exposes the following endpoints (replace `{resource}` with the schema name, e.g. `sensor`, `location`, `permit`):
+For each schema resource (e.g. `sensor`), the generated app exposes:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/{resource}` | Create a record |
-| `GET` | `/{resource}/all` | List all (paginated: `?offset=0&limit=100`) |
-| `GET` | `/{resource}/recent` | Most recent records (`?limit=10`) |
-| `GET` | `/{resource}/{id}` | Get one by primary key |
-| `PATCH` | `/{resource}/{id}` | Update a record |
-| `DELETE` | `/{resource}/{id}` | Delete a record |
-| `GET` | `/{resource}/query` | Dynamic filter query (FK schemas only) |
+| `POST` | `/sensor` | Create a record |
+| `GET` | `/sensor/all` | List all (paginated: `?offset=0&limit=100`) |
+| `GET` | `/sensor/recent` | Most recent records (`?limit=10`) |
+| `GET` | `/sensor/{id}` | Get one by primary key |
+| `PATCH` | `/sensor/{id}` | Update a record |
+| `DELETE` | `/sensor/{id}` | Delete a record |
+| `GET` | `/sensor/query` | Dynamic filter query (FK schemas only) |
 | `GET` | `/excel/export` | Download all data as `.xlsx` |
 | `POST` | `/excel/import` | Upload and sync an `.xlsx` workbook |
 
