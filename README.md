@@ -122,6 +122,19 @@ Options:
 
 See `doc/` for a worked example with real schemas and generated output.
 
+## Deployment
+
+A ready-to-use Podman deployment lives in `podman/`. It spins up a PostGIS database and the generated FastAPI app as two containers — no manual setup beyond dropping schemas and filling in a `.env` file:
+
+```bash
+cd podman/
+cp .env.example .env          # fill in passwords
+# add *.schema.yaml files to schemas/
+podman-compose up -d
+```
+
+See [`podman/README.md`](podman/README.md) for full instructions.
+
 ## Roadmap
 
 Items are grouped by priority. Checked items are complete.
@@ -165,6 +178,7 @@ Items are grouped by priority. Checked items are complete.
 ### Optional / Future
 
 - [x] Support for PostgreSQL and other SQLAlchemy-compatible backends
+- [x] Podman/container deployment (compose.yaml + Dockerfile + PostGIS)
 - [ ] Auto-generated front-end form from schema fields
 - [ ] DrawIO ERD → Frictionless schema converter
 - [x] Default query routes for common patterns derived from schema metadata

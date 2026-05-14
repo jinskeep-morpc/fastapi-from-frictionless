@@ -1,3 +1,9 @@
+## 2026-05-14 — Issue #54: Podman deployment
+
+Added `podman/` folder with six files: `compose.yaml` (two services — `postgres` using `docker.io/postgis/postgis` and `api` built from the local Dockerfile; shared bridge network `10.91.0.0/16` with static IPs following the podgis pattern), `Dockerfile` (Python 3.12-slim, installs `fastapifromfrictionless`, `uvicorn[standard]`, `psycopg2-binary`), `entrypoint.sh` (generates app files from mounted `/schemas` volume into `/app/api/` package at startup, then runs `uvicorn api.app:app`), `.env.example` (documents all env vars), `.gitignore` (ignores `.env` and `postgres/`), and `README.md` (setup instructions). The generated code uses relative imports so the entrypoint creates `api/__init__.py` to make the output directory a proper Python package before uvicorn starts.
+
+---
+
 ## 2026-05-13 — Issue #52: Expand documentation
 
 Rewrote README Quick Start with six numbered sections: CLI usage, starting the app, endpoint table per resource (POST, GET/all, GET/recent, GET/{pk}, PATCH, DELETE, GET/query, GET/excel/export, POST/excel/import), env var configuration table (DATABASE_URL, ALLOWED_ORIGINS, API_KEY, SCHEMA_FOLDER, API_URL), Excel workflow code examples, and CLI reference. Added jinja2 to Requirements list. Updated Core capabilities. No code changes.
