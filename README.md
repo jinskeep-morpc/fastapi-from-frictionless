@@ -124,14 +124,19 @@ See [`doc/quickstart.ipynb`](doc/quickstart.ipynb) for a step-by-step walkthroug
 
 ## Deployment
 
-A ready-to-use Podman deployment lives in `podman/`. It spins up a PostGIS database and the generated FastAPI app as two containers — no manual setup beyond dropping schemas and filling in a `.env` file:
+A ready-to-use Podman deployment lives in `podman/`. It spins up three containers — PostGIS database, pgAdmin web UI, and the generated FastAPI app — with no manual setup beyond dropping schemas into a folder and filling in a `.env` file.
+
+The API image uses a **two-stage build**: Stage 1 generates FastAPI code from your schemas; Stage 2 produces a lean runtime image. Both stages pull **pre-built base images** from ghcr.io, so only the copy and generation steps run locally — no pip installs required.
 
 ```bash
 cd podman/
-cp .env.example .env          # fill in passwords
+cp .env.example .env          # fill in passwords and settings
 # add *.schema.yaml files to schemas/
-podman-compose up -d
+podman-compose build api      # generate app code from your schemas (~20 s)
+podman-compose up -d          # start all three containers
 ```
+
+After schema changes, re-run `podman-compose build api` then `podman-compose up -d api`.
 
 See [`podman/README.md`](podman/README.md) for full instructions.
 
