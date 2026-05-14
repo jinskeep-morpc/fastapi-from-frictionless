@@ -173,6 +173,7 @@ The API connects to postgres using the service alias `postgres` as the hostname 
 | `PGADMIN_DEFAULT_EMAIL` | — | Login email for the pgAdmin web UI |
 | `PGADMIN_DEFAULT_PASSWORD` | — | Login password for the pgAdmin web UI |
 | `DATABASE_URL` | *(set by compose)* | SQLAlchemy connection URL; automatically constructed from the postgres credentials |
+| `SCHEMA_FOLDER` | `schemas` | Host-side folder name containing `*.schema.yaml` files; used as the Docker build context and the runtime volume mount |
 | `API_KEY` | *(unset)* | If set, all API requests require `X-API-Key: <value>` header |
 | `ALLOWED_ORIGINS` | `*` | Comma-separated CORS allowed origins |
 | `API_URL` | `http://localhost:8000` | Public base URL (used by the Excel export endpoint) |

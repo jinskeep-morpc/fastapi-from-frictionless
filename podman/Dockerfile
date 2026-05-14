@@ -4,9 +4,10 @@
 # runs the CLI against the schemas/ folder.  Nothing from this stage carries
 # into the final image.
 FROM python:3.12-slim AS generator
+ARG SCHEMA_FOLDER=schemas
 WORKDIR /generator
 RUN pip install --no-cache-dir "fastapifromfrictionless[generate]"
-COPY schemas/ /schemas/
+COPY ${SCHEMA_FOLDER}/ /schemas/
 RUN mkdir -p /generator/api && \
     python -m fastapifromfrictionless.cli generate /schemas --output /generator/api && \
     touch /generator/api/__init__.py
