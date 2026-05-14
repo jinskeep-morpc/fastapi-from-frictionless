@@ -69,10 +69,16 @@ def create_package(folder: str | os.PathLike, filename: str | os.PathLike, valid
     from frictionless.resources import TableResource
 
     stem = pathlib.Path(filename).stem
-    filename_str = str(filename)
+    # chdir to the Excel file's directory so frictionless can reference it by
+    # basename (relative path). Absolute paths are rejected by frictionless as
+    # "unsafe" during package.validate(). Schema files and the output YAML are
+    # accessed via absolute paths constructed from the resolved schema folder.
+    excel_dir = pathlib.Path(filename).resolve().parent
+    local_filename = pathlib.Path(filename).name
+    schema_folder = pathlib.Path(folder).resolve()
 
-    with chdir(folder):
-        schemas = [x for x in os.listdir(os.getcwd()) if x.endswith("schema.yaml")]
+    with chdir(excel_dir):
+        schemas = [x for x in os.listdir(schema_folder) if x.endswith("schema.yaml")]
         resources: list = []
 
         for schema in schemas:
@@ -80,11 +86,11 @@ def create_package(folder: str | os.PathLike, filename: str | os.PathLike, valid
             schema_name = schema.replace(".schema.yaml", "")
             # Strip foreign keys before standalone infer — frictionless requires the
             # full package context to resolve cross-resource FK references.
-            schema_descriptor = frictionless.Schema.from_descriptor(schema).to_descriptor()
+            schema_descriptor = frictionless.Schema.from_descriptor(str(schema_folder / schema)).to_descriptor()
             schema_descriptor.pop("foreignKeys", None)
             resource = TableResource(
                 name=schema_name,
-                path=filename_str,
+                path=local_filename,
                 control=ExcelControl(sheet=schema_name),
                 schema=frictionless.Schema.from_descriptor(schema_descriptor),
                 dialect=frictionless.Dialect(skip_blank_rows=True),
@@ -99,16 +105,16 @@ def create_package(folder: str | os.PathLike, filename: str | os.PathLike, valid
             created=datetime.now().isoformat(),
         )
 
-        package_filename = stem + ".package.yaml"
-        logger.info(f"Saving package to {folder}/{package_filename}")
-        package.to_yaml(package_filename)
+        package_yaml_path = str(schema_folder / (stem + ".package.yaml"))
+        logger.info(f"Saving package to {package_yaml_path}")
+        package.to_yaml(package_yaml_path)
 
         if validate:
             valid = package.validate()
             if valid.valid:
-                logger.info(f"{package_filename} is a valid package.")
+                logger.info(f"{package_yaml_path} is a valid package.")
             else:
-                logger.error(f"{package_filename} is an invalid package. Report below:\n{valid}")
+                logger.error(f"{package_yaml_path} is an invalid package. Report below:\n{valid}")
                 raise RuntimeError
 
     return package
