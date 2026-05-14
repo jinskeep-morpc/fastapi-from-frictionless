@@ -1,3 +1,6 @@
+## 2026-05-14 — Fix geoalchemy2 missing dependency (#81)
+
+Schemas without geo field types raised ModuleNotFoundError because models_header.py.jinja2 unconditionally imported from geoalchemy2. Added has_geo tracking in model.build() and made the import conditional in the template. Also added geoalchemy2 to pyproject.toml base dependencies and podman/Dockerfile.runtime-base so the runtime image includes it. 89 tests passing.
 ## Issue #66 — Update README and quickstart notebook
 
 Fixed docs that became stale after the multi-stage Dockerfile (#60) and pre-built base images (#63):
@@ -161,4 +164,5 @@ Added `dump_to_excel(api_url, schema_folder, output_filepath)` to `load.py`. Fet
 Rewrote README to replace the rough WIP checklist with a proper package overview, requirements list, Quick Start, and a structured production roadmap (Foundation → Code Quality → Production Readiness → Developer Experience → Optional). Also added CLAUDE.md with the 9-step development workflow and coding guidelines. No code changes.
 
 ---
+
 
