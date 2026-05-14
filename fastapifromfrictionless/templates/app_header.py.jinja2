@@ -93,9 +93,9 @@ def export_excel():
     )
 
 @app.post('/excel/import')
-async def import_excel(file: UploadFile = File(...)):
+def import_excel(file: UploadFile = File(...)):
     from fastapifromfrictionless.load import create_package, update_api_from_package
-    content = await file.read()
+    content = file.file.read()
     with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
         tmp.write(content)
         excel_path = tmp.name
