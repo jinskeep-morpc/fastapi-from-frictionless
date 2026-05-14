@@ -6,4 +6,5 @@ RUN pip install --no-cache-dir \
     "uvicorn[standard]" \
     psycopg2-binary \
     geoalchemy2 \
-    python-multipart
+    python-multipart \
+    frictionless
