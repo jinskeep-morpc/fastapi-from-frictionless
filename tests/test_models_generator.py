@@ -236,6 +236,41 @@ def any_yearmonth_folder(tmp_path):
     return tmp_path
 
 
+@pytest.fixture()
+def id_only_folder(tmp_path):
+    write_schema(
+        tmp_path,
+        "respondent",
+        """\
+        fields:
+          - name: id
+            type: integer
+            constraints:
+              required: true
+        primaryKey:
+          - id
+        """,
+    )
+    return tmp_path
+
+
+def test_id_only_schema_generates_valid_python(id_only_folder, tmp_path):
+    import ast
+
+    out = tmp_path / "models.py"
+    models(folder_str(id_only_folder)).build().save(out)
+    ast.parse(out.read_text())  # raises SyntaxError if invalid
+
+
+def test_id_only_base_has_pass(id_only_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(id_only_folder)).build().save(out)
+    content = out.read_text()
+    # RespondentBase and RespondentUpdate must both have a body
+    assert "class RespondentBase(SQLModel):\n    pass" in content
+    assert "class RespondentUpdate(RespondentBase):\n    pass" in content
+
+
 def test_any_type_maps_to_Any(any_yearmonth_folder, tmp_path):
     out = tmp_path / "models.py"
     models(folder_str(any_yearmonth_folder)).build().save(out)
