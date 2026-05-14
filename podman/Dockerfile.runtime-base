@@ -5,4 +5,5 @@ RUN pip install --no-cache-dir \
     "fastapifromfrictionless==${PACKAGE_VERSION}" \
     "uvicorn[standard]" \
     psycopg2-binary \
-    geoalchemy2
+    geoalchemy2 \
+    python-multipart

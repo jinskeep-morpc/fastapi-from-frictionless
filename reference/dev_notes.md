@@ -1,3 +1,6 @@
+## 2026-05-14 — Fix python-multipart missing from runtime dependencies (#93)
+
+The Excel import endpoint uses FastAPI UploadFile which requires python-multipart at import time. Without it the app crashed at startup with RuntimeError. Added to pyproject.toml base deps and Dockerfile.runtime-base.
 ## 2026-05-14 — Pin package version in base image builds to avoid PyPI CDN lag (#91)
 
 The Dockerfiles for base images installed fastapifromfrictionless without a version pin. When build-images.yml fired right after the PyPI publish, pip sometimes got the previous cached version. Added ARG PACKAGE_VERSION to both Dockerfiles and a PyPI polling step in the workflow that retries up to 12 minutes before starting the Docker builds. The workflow also now passes build-args: PACKAGE_VERSION=... to both builds.

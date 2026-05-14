@@ -25,6 +25,7 @@ dependencies = [
     "sqlalchemy",
     "xlsxwriter",
     "geoalchemy2",
+    "python-multipart",
 ]
 
 [project.optional-dependencies]
