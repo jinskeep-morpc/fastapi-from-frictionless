@@ -82,6 +82,7 @@ class models:
             model = self.build_model(self.folder, filename)
             self.models.append(model)
 
+        self.has_geo = any("Geometry" in m for m in self.models)
         return self
 
     def build_model(self, folder: str, filename: str) -> str:
@@ -209,7 +210,9 @@ class models:
         return result
 
     def save(self, path: str | PathLike):
-        header = _env.get_template("models_header.py.jinja2").render()
+        header = _env.get_template("models_header.py.jinja2").render(
+            has_geo=getattr(self, "has_geo", True)
+        )
         with open(path, "w") as file:
             file.write(header + "".join(self.models))
             logger.info(f"models saved to {path}")

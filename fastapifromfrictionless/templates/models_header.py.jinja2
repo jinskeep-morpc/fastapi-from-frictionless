@@ -5,7 +5,9 @@ from sqlalchemy import DateTime
 from sqlmodel import Field, Relationship, SQLModel
 from datetime import date, datetime, timezone, time, timedelta
 from pydantic import EmailStr, AnyUrl, Json
+<% if has_geo %>
 from geoalchemy2.types import Geometry
+<% endif %>
 
 def utcnow():
     '''Returns the current time in UTC.'''

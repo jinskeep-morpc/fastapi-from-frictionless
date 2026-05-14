@@ -287,3 +287,38 @@ def test_string_uri_format_maps_to_AnyUrl(any_yearmonth_folder, tmp_path):
     out = tmp_path / "models.py"
     models(folder_str(any_yearmonth_folder)).build().save(out)
     assert "link: AnyUrl" in out.read_text()
+
+
+# ---------------------------------------------------------------------------
+# geoalchemy2 conditional import
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def geo_folder(tmp_path):
+    write_schema(
+        tmp_path,
+        "site",
+        """\
+        fields:
+          - name: id
+            type: integer
+          - name: location
+            type: geopoint
+        primaryKey:
+          - id
+        """,
+    )
+    return tmp_path
+
+
+def test_geo_schema_includes_geoalchemy2_import(geo_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(geo_folder)).build().save(out)
+    assert "from geoalchemy2.types import Geometry" in out.read_text()
+
+
+def test_non_geo_schema_omits_geoalchemy2_import(simple_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(simple_folder)).build().save(out)
+    assert "geoalchemy2" not in out.read_text()
