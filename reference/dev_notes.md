@@ -1,3 +1,6 @@
+## 2026-05-14 — Fix create_package FK error during standalone resource.infer() (#101)
+
+frictionless raises 'package is required for foreign keys' when infer() is called on a standalone TableResource with FK constraints. Strip foreignKeys from schema descriptor before infer; FK validation still happens at package level when validate=True.
 ## 2026-05-14 — Fix frictionless[excel] missing openpyxl for Excel import (#99)
 
 frictionless base install does not include openpyxl (needed to read .xlsx files). Changed from frictionless to frictionless[excel] in pyproject.toml and Dockerfile.runtime-base.

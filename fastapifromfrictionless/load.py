@@ -78,11 +78,15 @@ def create_package(folder: str | os.PathLike, filename: str | os.PathLike, valid
         for schema in schemas:
             logger.info(f"appending {schema} to package")
             schema_name = schema.replace(".schema.yaml", "")
+            # Strip foreign keys before standalone infer — frictionless requires the
+            # full package context to resolve cross-resource FK references.
+            schema_descriptor = frictionless.Schema.from_descriptor(schema).to_descriptor()
+            schema_descriptor.pop("foreignKeys", None)
             resource = TableResource(
                 name=schema_name,
                 path=filename_str,
                 control=ExcelControl(sheet=schema_name),
-                schema=(frictionless.Schema.from_descriptor(schema)),
+                schema=frictionless.Schema.from_descriptor(schema_descriptor),
                 dialect=frictionless.Dialect(skip_blank_rows=True),
             )
             resource.infer(stats=True)
