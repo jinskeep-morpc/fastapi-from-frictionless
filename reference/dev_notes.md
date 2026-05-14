@@ -1,3 +1,6 @@
+## 2026-05-14 — Fix generator imports crashing runtime via __init__.py (#95)
+
+Generator classes (app, database, model, validate) all require jinja2/frictionless from the [generate] extra. But __init__.py imported them unconditionally, so import fastapifromfrictionless failed in runtime environments. Wrapped generator imports in try/except ImportError so the base package is importable without the extra. 90 tests passing.
 ## 2026-05-14 — Fix python-multipart missing from runtime dependencies (#93)
 
 The Excel import endpoint uses FastAPI UploadFile which requires python-multipart at import time. Without it the app crashed at startup with RuntimeError. Added to pyproject.toml base deps and Dockerfile.runtime-base.
