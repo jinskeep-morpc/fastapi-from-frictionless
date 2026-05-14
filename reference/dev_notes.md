@@ -1,3 +1,9 @@
+## 2026-05-14 — Issue #58: Replace doc/ with quickstart notebook
+
+Removed all legacy content from `doc/` (two devlog notebooks, stale generated Python files pre-dating the Jinja2 templates, `__pycache__`, `.log`, `.db`). Created `doc/quickstart.ipynb`: a 9-step narrative walkthrough of the podman deployment workflow — define schemas (Python cells writing YAML), configure `.env`, start the stack (`podman-compose up -d`), explore the API (requests cells that work against a live stack), browse with pgAdmin, Excel import/export, schema updates, and cleanup. Shell commands shown inline in markdown; no attempt to run podman from within the notebook.
+
+---
+
 ## 2026-05-14 — Issue #54: Podman deployment
 
 Added `podman/` folder with six files: `compose.yaml` (two services — `postgres` using `docker.io/postgis/postgis` and `api` built from the local Dockerfile; shared bridge network `10.91.0.0/16` with static IPs following the podgis pattern), `Dockerfile` (Python 3.12-slim, installs `fastapifromfrictionless`, `uvicorn[standard]`, `psycopg2-binary`), `entrypoint.sh` (generates app files from mounted `/schemas` volume into `/app/api/` package at startup, then runs `uvicorn api.app:app`), `.env.example` (documents all env vars), `.gitignore` (ignores `.env` and `postgres/`), and `README.md` (setup instructions). The generated code uses relative imports so the entrypoint creates `api/__init__.py` to make the output directory a proper Python package before uvicorn starts.
