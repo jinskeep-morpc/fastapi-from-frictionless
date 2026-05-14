@@ -206,3 +206,49 @@ def test_save_writes_file(simple_folder, tmp_path):
     content = out.read_text()
     assert "LocationBase" in content
     assert "from sqlmodel import" in content
+
+
+# ---------------------------------------------------------------------------
+# type_map coverage — regression tests for missing / unknown types
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def any_yearmonth_folder(tmp_path):
+    write_schema(
+        tmp_path,
+        "item",
+        """\
+        fields:
+          - name: id
+            type: integer
+          - name: payload
+            type: any
+          - name: period
+            type: yearmonth
+          - name: link
+            type: string
+            format: uri
+        primaryKey:
+          - id
+        """,
+    )
+    return tmp_path
+
+
+def test_any_type_maps_to_Any(any_yearmonth_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(any_yearmonth_folder)).build().save(out)
+    assert "payload: Any" in out.read_text()
+
+
+def test_yearmonth_type_maps_to_str(any_yearmonth_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(any_yearmonth_folder)).build().save(out)
+    assert "period: str" in out.read_text()
+
+
+def test_string_uri_format_maps_to_AnyUrl(any_yearmonth_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(any_yearmonth_folder)).build().save(out)
+    assert "link: AnyUrl" in out.read_text()

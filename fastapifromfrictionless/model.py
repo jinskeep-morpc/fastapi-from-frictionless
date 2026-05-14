@@ -29,9 +29,11 @@ type_map = {
     "date": {"default": "date"},
     "time": {"default": "time"},
     "year": {"default": "int"},
+    "yearmonth": {"default": "str"},
     "duration": {"default": "timedelta"},
     "geopoint": {"default": "Geometry('POINT')"},
     "geojson": {"default": "Geometry('GEOMETRY')"},
+    "any": {"default": "Any"},
 }
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -144,7 +146,8 @@ class models:
                 continue
 
             field_string = f"{field.name}: "
-            field_string += f"{type_map[field.type][field.format]}"
+            fmt_map = type_map.get(field.type, {"default": "Any"})
+            field_string += fmt_map.get(field.format, fmt_map["default"])
 
             if "required" not in field.constraints:
                 field_string += " | None"
