@@ -1,3 +1,14 @@
+## Issue #66 — Update README and quickstart notebook
+
+Fixed docs that became stale after the multi-stage Dockerfile (#60) and pre-built base images (#63):
+- README Deployment section: three containers not two, explicit build step, pre-built image callout
+- Notebook Step 1: updated folder listing, pre-built image explanation
+- Notebook Step 3: added SCHEMA_FOLDER to .env example
+- Notebook Step 4: rewritten — generation is at build time, not startup
+- Notebook Step 8: rewritten — schema changes require rebuild not restart
+
+---
+
 ## Issue #63 — Pre-built base images for faster Podman deployment
 
 Added two base images published to ghcr.io on each release via `.github/workflows/build-images.yml`:
