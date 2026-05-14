@@ -49,12 +49,28 @@ jobs:
             echo "tag=${TAG#v}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Wait for version to be available on PyPI
+        run: |
+          VERSION="${{ steps.version.outputs.tag }}"
+          echo "Waiting for fastapifromfrictionless==${VERSION} on PyPI..."
+          for i in $(seq 1 24); do
+            if pip index versions fastapifromfrictionless 2>/dev/null | grep -q "${VERSION}"; then
+              echo "Version ${VERSION} is available."
+              exit 0
+            fi
+            echo "Attempt ${i}/24: not yet available, waiting 30s..."
+            sleep 30
+          done
+          echo "ERROR: Version ${VERSION} not visible on PyPI after 12 minutes."
+          exit 1
+
       - name: Build and push generator base image
         uses: docker/build-push-action@v6
         with:
           context: podman
           file: podman/Dockerfile.generator-base
           push: true
+          build-args: PACKAGE_VERSION=${{ steps.version.outputs.tag }}
           tags: |
             ${{ env.GENERATOR_IMAGE }}:latest
             ${{ env.GENERATOR_IMAGE }}:${{ steps.version.outputs.tag }}
@@ -65,6 +81,7 @@ jobs:
           context: podman
           file: podman/Dockerfile.runtime-base
           push: true
+          build-args: PACKAGE_VERSION=${{ steps.version.outputs.tag }}
           tags: |
             ${{ env.RUNTIME_IMAGE }}:latest
             ${{ env.RUNTIME_IMAGE }}:${{ steps.version.outputs.tag }}
