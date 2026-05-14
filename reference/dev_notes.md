@@ -1,3 +1,13 @@
+## Issue #63 — Pre-built base images for faster Podman deployment
+
+Added two base images published to ghcr.io on each release via `.github/workflows/build-images.yml`:
+- `ghcr.io/jinskeep-morpc/fastapi-from-frictionless-generator` — python:3.12-slim + [generate] extras
+- `ghcr.io/jinskeep-morpc/fastapi-from-frictionless-runtime` — python:3.12-slim + runtime deps
+
+`podman/Dockerfile` now pulls these instead of re-running pip from scratch. Build time drops from ~3 min to ~20 s. Released as v0.2.1.
+
+---
+
 ## Issue #60 — SCHEMA_FOLDER env variable
 
 Made the schema folder name configurable via `SCHEMA_FOLDER` (default: `schemas`). The variable threads through the Dockerfile `ARG`, the compose `build.args`, and the runtime volume mount (`./${SCHEMA_FOLDER:-schemas}:/schemas:Z`). Updated `.env.example` and `podman/README.md` to document it.
