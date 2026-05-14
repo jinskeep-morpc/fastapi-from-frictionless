@@ -2,8 +2,6 @@ import logging
 import pathlib
 import stat
 
-import frictionless.errors
-from frictionless import Dialect, Validator
 from pydantic import ValidationError
 from requests import HTTPError, JSONDecodeError, Session
 

@@ -67,19 +67,25 @@ API_URL=http://localhost:8000
 
 > **Security**: `.env` is listed in `.gitignore`. Never commit it.
 
-### 4. Start the services
+### 4. Build and start the services
+
+The API image uses a **two-stage build**: Stage 1 generates the FastAPI application from your schemas; Stage 2 produces a lean runtime image without the generation tools.
 
 ```bash
+# Build the API image (reads schemas/ and generates the app code)
+podman-compose build api
+
+# Start all three services
 podman-compose up -d
 ```
 
-The first run builds the API image and pulls the PostGIS and pgAdmin images (~2–3 minutes). On startup the API container:
+The first run pulls the PostGIS and pgAdmin images and builds the API image (~3–5 minutes). Subsequent builds are fast because the heavy pip install layer is cached.
 
-1. Reads `*.schema.yaml` files from `schemas/`
-2. Generates `models.py`, `app.py`, and `database.py`
-3. Connects to the PostGIS database (waits for it to be healthy)
-4. Creates all tables via SQLModel
-5. Starts uvicorn on port 8000
+On startup the API container:
+
+1. Connects to the PostGIS database (waits for it to be healthy)
+2. Creates all tables via SQLModel
+3. Starts uvicorn on port 8000 — no generation step at runtime
 
 ### 5. Verify
 
@@ -117,12 +123,14 @@ pgAdmin data (saved connections, sessions) is persisted in `./pgadmin/` and is e
 
 ## Updating schemas
 
-When you change or add schemas, rebuild the API image and restart:
+Schema changes require rebuilding the API image (generation happens at build time, not startup):
 
 ```bash
 podman-compose build api
 podman-compose up -d api
 ```
+
+The schemas are baked into the image during the build. The `schemas/` volume is still mounted at runtime so the Excel import/export endpoints can read the schema definitions.
 
 ## Stopping and cleaning up
 

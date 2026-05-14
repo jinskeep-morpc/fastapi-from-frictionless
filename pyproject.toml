@@ -19,21 +19,25 @@ classifiers = [
 dependencies = [
     "requests",
     "pandas",
-    "frictionless",
     "SQLmodel",
     "FastAPI",
     "fastapi_querybuilder",
     "sqlalchemy",
     "xlsxwriter",
-    "jinja2",
 ]
 
 [project.optional-dependencies]
+generate = [
+    "frictionless",
+    "jinja2",
+]
 dev = [
     "pytest",
     "ruff",
     "mypy",
     "openpyxl",
+    "frictionless",
+    "jinja2",
 ]
 
 [project.scripts]
