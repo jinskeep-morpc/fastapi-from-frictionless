@@ -271,10 +271,10 @@ def test_id_only_base_has_pass(id_only_folder, tmp_path):
     assert "class RespondentUpdate(RespondentBase):\n    pass" in content
 
 
-def test_any_type_maps_to_Any(any_yearmonth_folder, tmp_path):
+def test_any_type_maps_to_str(any_yearmonth_folder, tmp_path):
     out = tmp_path / "models.py"
     models(folder_str(any_yearmonth_folder)).build().save(out)
-    assert "payload: Any" in out.read_text()
+    assert "payload: str" in out.read_text()
 
 
 def test_header_imports_Any(simple_folder, tmp_path):
