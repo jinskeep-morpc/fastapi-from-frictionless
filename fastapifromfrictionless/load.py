@@ -121,7 +121,7 @@ def create_package(folder: str | os.PathLike, filename: str | os.PathLike, valid
 
 
 def dump_to_excel(
-    api_url: str, schema_folder: str | os.PathLike, output_filepath: str | os.PathLike
+    api_url: str, schema_folder: str | os.PathLike, output_filepath: str | os.PathLike, api_key: str = ""
 ):
     """Fetch all records from each API endpoint and write them to an Excel workbook.
 
@@ -143,6 +143,8 @@ def dump_to_excel(
 
     schemas = sorted(f for f in os.listdir(schema_folder) if f.endswith("schema.yaml"))
     session = Session()
+    if api_key:
+        session.headers.update({"x-api-key": api_key})
 
     with pd.ExcelWriter(output_filepath) as writer:
         logger.info(f"Dumping API data to {output_filepath}")
@@ -223,20 +225,19 @@ def requests_get_all(
         session = requests.Session()
     url = f"{os.path.join(server_url, endpoint, 'all')}"
     logger.debug(f"Getting all from at {url}")
+    json = []
     try:
         r = session.get(url)
         r.raise_for_status()
+        json = r.json()
     except requests.exceptions.HTTPError as e:
         logger.error(f"HTTP Error: {e}")
+    except requests.exceptions.JSONDecodeError as e:
+        logger.error(f"Json Decoder Error: {e}")
     except Exception as e:
         logger.error(f"Other Error: {e}")
-    else:
-        try:
-            json = r.json()
-        except requests.exceptions.JSONDecodeError as e:
-            logger.error(f"Json Decoder Error: {e}")
-
-    r.close()
+    finally:
+        r.close()
 
     return pd.DataFrame.from_dict(json)
 
@@ -260,7 +261,7 @@ def requests_update(
     return json
 
 
-def update_api_from_package(api_url, package_file, skip=[]):
+def update_api_from_package(api_url, package_file, skip=[], api_key: str = ""):
     import frictionless
     import pandas as pd
     from requests import Session
@@ -271,6 +272,8 @@ def update_api_from_package(api_url, package_file, skip=[]):
     logger.info(f"Updating data from {package_file} for {resource_names}")
 
     session = Session()
+    if api_key:
+        session.headers.update({"x-api-key": api_key})
 
     # For each sheet..
     for resource in resources:
