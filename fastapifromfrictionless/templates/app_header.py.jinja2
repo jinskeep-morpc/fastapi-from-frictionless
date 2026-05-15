@@ -96,7 +96,7 @@ def export_excel():
 def import_excel(file: UploadFile = File(...)):
     from fastapifromfrictionless.load import create_package, update_api_from_package
     content = file.file.read()
-    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False, dir=SCHEMA_FOLDER) as tmp:
         tmp.write(content)
         excel_path = tmp.name
     excel_stem = Path(excel_path).stem
