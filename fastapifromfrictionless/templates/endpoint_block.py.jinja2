@@ -9,6 +9,15 @@ def create_<< name_lower >>(*, session: Session = Depends(get_session), << name_
     session.refresh(<< name_lower >>)
     return << name_lower >>
 
+@app.post('/<< name_lower >>s/bulk', response_model=list[<< name >>Public])
+def create_<< name_lower >>s_bulk(*, session: Session = Depends(get_session), items: list[<< name >>Create]):
+    db_items = [<< name >>.model_validate(item) for item in items]
+    session.add_all(db_items)
+    session.commit()
+    for db_item in db_items:
+        session.refresh(db_item)
+    return db_items
+
 @app.get('/<< name_lower >>/all', response_model=list[<< list_response_model >>])
 def read_<< name_lower >>s(*, session: Session = Depends(get_session), offset: int = 0, limit: int = Query(default=100, le=1000)):
     << name_lower >>s = session.exec(select(<< name >>).offset(offset).limit(limit)).all()

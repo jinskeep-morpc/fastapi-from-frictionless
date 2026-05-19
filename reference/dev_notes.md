@@ -8,6 +8,16 @@ Three template-level fixes to the generated FastAPI app, all in `app_header.py.j
 
 Added `tests/test_security_and_background.py` (21 tests) that assert the generated app contains the new lifespan/imports/async patterns and does not contain the deprecated `on_event('startup')`, `tempfile.mktemp`, or `dir=SCHEMA_FOLDER` patterns.
 
+## feat/bulk-post-112
+
+Added a bulk POST endpoint to eliminate N round-trips on Excel ingest (#112).
+
+- `fastapifromfrictionless/templates/endpoint_block.py.jinja2` — new `POST /{name}s/bulk` route accepting `list[{Name}Create]`, returning `list[{Name}Public]`. Uses `session.add_all(...)`, a single `session.commit()`, then refresh each row.
+- `fastapifromfrictionless/load.py` — added `requests_bulk_post(...)` helper that POSTs a JSON list to `/{endpoint}s/bulk` with optional `X-API-Key` header. Updated `update_api_from_package` to queue new rows per sheet into `new_payloads` and dispatch them in one bulk POST after the row loop. Changed rows still PATCH individually (no bulk update).
+- `tests/test_bulk_endpoint.py` — 11 new tests: template rendering checks, helper behavior with mocked session, API key header, trailing slash handling, and error propagation. Suite: 101 tests, all green.
+
+Why bulk POST only: there is no `model_validate` semantics for bulk update, and PATCH semantics differ per row (`exclude_unset=True`); a bulk-update path would need its own design.
+
 ## fix/quick-wins-105-109
 
 Fixed 5 code-review quick wins in parallel via feature-team:
