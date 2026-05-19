@@ -1,3 +1,13 @@
+## fix/security-and-background-tasks-110-111-115
+
+Three template-level fixes to the generated FastAPI app, all in `app_header.py.jinja2`:
+
+- #110: fail-closed API key auth. Replaced the deprecated `@app.on_event('startup')` handler with an `@asynccontextmanager` `lifespan` wired into `FastAPI(lifespan=lifespan, ...)`. The lifespan raises `RuntimeError` at startup when `API_KEY` is unset; set `ALLOW_NO_AUTH=true` to explicitly run without auth (logs a warning). Prevents new deployments from silently coming up wide open.
+- #115: safer temp file handling for `/excel/export` and `/excel/import`. Replaced `tempfile.mktemp()` (TOCTOU race, never deleted) with `NamedTemporaryFile(delete=False)` plus a `background_tasks.add_task(os.unlink, tmp_path)` cleanup. The import handler no longer writes uploads into `SCHEMA_FOLDER`; it uses the system temp dir and cleans up both the upload and the generated `.package.yaml` in a `finally` block.
+- #111: `/excel/export` and `/excel/import` are now `async def` and offload the blocking `dump_to_excel`, `create_package`, and `update_api_from_package` calls via `asyncio.to_thread(...)` so the event loop is not stalled during long Excel I/O.
+
+Added `tests/test_security_and_background.py` (21 tests) that assert the generated app contains the new lifespan/imports/async patterns and does not contain the deprecated `on_event('startup')`, `tempfile.mktemp`, or `dir=SCHEMA_FOLDER` patterns.
+
 ## fix/quick-wins-105-109
 
 Fixed 5 code-review quick wins in parallel via feature-team:
