@@ -226,6 +226,7 @@ def requests_get_all(
     url = f"{server_url.rstrip('/')}/{endpoint}/all"
     logger.debug(f"Getting all from at {url}")
     json = []
+    r = None
     try:
         r = session.get(url)
         r.raise_for_status()
@@ -237,7 +238,8 @@ def requests_get_all(
     except Exception as e:
         logger.error(f"Other Error: {e}")
     finally:
-        r.close()
+        if r is not None:
+            r.close()
 
     return pd.DataFrame.from_dict(json)
 
