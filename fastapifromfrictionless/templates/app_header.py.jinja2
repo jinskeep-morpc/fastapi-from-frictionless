@@ -1,10 +1,13 @@
 
 # app.py
+import asyncio
+import logging
 import os
 import secrets
 import tempfile
+from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import Depends, FastAPI, File, HTTPException, Query, Security, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Query, Security, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -19,8 +22,11 @@ from .database import create_db_and_tables, engine
 from .models import *
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# API key auth — set API_KEY env var to enable; leave unset to disable (dev mode)
+logger = logging.getLogger(__name__)
+
+# API key auth — API_KEY env var is required; set ALLOW_NO_AUTH=true to opt out (dev only)
 _API_KEY = os.getenv("API_KEY", "")
+_ALLOW_NO_AUTH = os.getenv("ALLOW_NO_AUTH", "").lower() in ("1", "true")
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 async def verify_api_key(api_key: str = Security(_api_key_header)):
@@ -33,8 +39,19 @@ async def verify_api_key(api_key: str = Security(_api_key_header)):
 SCHEMA_FOLDER = os.getenv("SCHEMA_FOLDER", ".")
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not _API_KEY and not _ALLOW_NO_AUTH:
+        raise RuntimeError(
+            "API_KEY env var is not set. Set API_KEY to enable auth, or set ALLOW_NO_AUTH=true to run without authentication."
+        )
+    if _ALLOW_NO_AUTH and not _API_KEY:
+        logger.warning("ALLOW_NO_AUTH=true: API is running without authentication. Do not use in production.")
+    create_db_and_tables()
+    yield
+
 # Initiate app
-app = FastAPI(dependencies=[Depends(verify_api_key)])
+app = FastAPI(lifespan=lifespan, dependencies=[Depends(verify_api_key)])
 
 # CORS — restrict origins via ALLOWED_ORIGINS env var (comma-separated), default open for dev
 _origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -72,38 +89,52 @@ def validation_exception_handler(request, exc):
         content={"error": "Validation error", "detail": exc.errors()},
     )
 
-# Dependencies
-@app.on_event('startup')
-def on_startup():
-    create_db_and_tables()
-
 def get_session():
     with Session(engine) as session:
         yield session
 
 # Excel file endpoints
 @app.get('/excel/export', response_class=FileResponse)
-def export_excel():
+async def export_excel(background_tasks: BackgroundTasks):
     from fastapifromfrictionless.load import dump_to_excel
-    tmp = tempfile.mktemp(suffix='.xlsx')
-    dump_to_excel(api_url=API_URL, schema_folder=SCHEMA_FOLDER, output_filepath=tmp, api_key=_API_KEY)
+    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
+        tmp_path = tmp.name
+    await asyncio.to_thread(
+        dump_to_excel,
+        api_url=API_URL,
+        schema_folder=SCHEMA_FOLDER,
+        output_filepath=tmp_path,
+        api_key=_API_KEY,
+    )
+    background_tasks.add_task(os.unlink, tmp_path)
     return FileResponse(
-        tmp,
+        tmp_path,
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         filename='export.xlsx',
     )
 
 @app.post('/excel/import')
-def import_excel(file: UploadFile = File(...)):
+async def import_excel(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
     from fastapifromfrictionless.load import create_package, update_api_from_package
-    content = file.file.read()
-    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False, dir=SCHEMA_FOLDER) as tmp:
+    content = await file.read()
+    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
         tmp.write(content)
         excel_path = tmp.name
     excel_stem = Path(excel_path).stem
-    create_package(folder=SCHEMA_FOLDER, filename=excel_path)
+    await asyncio.to_thread(create_package, folder=SCHEMA_FOLDER, filename=excel_path)
     package_file = str(Path(SCHEMA_FOLDER) / f'{excel_stem}.package.yaml')
-    update_api_from_package(api_url=API_URL, package_file=package_file, api_key=_API_KEY)
+    try:
+        await asyncio.to_thread(
+            update_api_from_package,
+            api_url=API_URL,
+            package_file=package_file,
+            api_key=_API_KEY,
+        )
+    finally:
+        os.unlink(excel_path)
+        package_yaml = Path(SCHEMA_FOLDER) / f'{excel_stem}.package.yaml'
+        if package_yaml.exists():
+            package_yaml.unlink()
     return {'status': 'imported', 'filename': file.filename}
 
 # @app.get('/')
