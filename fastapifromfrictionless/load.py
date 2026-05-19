@@ -204,7 +204,7 @@ def requests_post(
     if session is None:
         session = requests.Session()
     logger.debug(f"Posting {model.model_dump_json()} to {server_url}/{endpoint}.")
-    r = session.post(f"{os.path.join(server_url, endpoint)}", data=model.model_dump_json())
+    r = session.post(f"{server_url.rstrip('/')}/{endpoint}", data=model.model_dump_json())
     logger.debug(r.content.decode("utf-8", errors="replace"))
     r.raise_for_status()
     json = r.json()
@@ -223,9 +223,10 @@ def requests_get_all(
 
     if session is None:
         session = requests.Session()
-    url = f"{os.path.join(server_url, endpoint, 'all')}"
+    url = f"{server_url.rstrip('/')}/{endpoint}/all"
     logger.debug(f"Getting all from at {url}")
     json = []
+    r = None
     try:
         r = session.get(url)
         r.raise_for_status()
@@ -237,7 +238,8 @@ def requests_get_all(
     except Exception as e:
         logger.error(f"Other Error: {e}")
     finally:
-        r.close()
+        if r is not None:
+            r.close()
 
     return pd.DataFrame.from_dict(json)
 
@@ -253,7 +255,7 @@ def requests_update(
     if session is None:
         session = requests.Session()
     logger.debug(f"Updating {pk} at {server_url}/{endpoint} to {model.model_dump_json()}")
-    r = session.patch(f"{os.path.join(server_url, endpoint, pk)}", data=model.model_dump_json())
+    r = session.patch(f"{server_url.rstrip('/')}/{endpoint}/{pk}", data=model.model_dump_json())
     r.raise_for_status()
     json = r.json()
     r.close()
@@ -332,12 +334,7 @@ def update_api_from_package(api_url, package_file, skip=[], api_key: str = ""):
                     current_row = current_all.loc[current_all[current_all.columns[0]] == row_pk]
                     current_row = current_row.loc[[x for x in current_row.index][0]].to_dict()
 
-                    for k, v in row.items():
-                        changed = False
-                        if current_row[k] == v:
-                            continue
-                        else:
-                            changed = True
+                    changed = any(current_row.get(k) != v for k, v in row.items())
 
                     # if it is changed, update.
                     if changed:

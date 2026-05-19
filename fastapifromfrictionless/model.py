@@ -162,10 +162,10 @@ class models:
             if field.name in foreign_keys:
                 if " = Field(primary_key = True)" in field_string:
                     field_string = (
-                        f"{field_string.rstrip(')')}, foreign_key='{field.name.replace('_', '.')}')"
+                        f"{field_string.rstrip(')')}, foreign_key='{field.name.replace('_', '.')}', index=True)"
                     )
                 else:
-                    field_string += f" = Field({'default=None, ' if required else ''}foreign_key='{field.name.replace('_', '.')}')"
+                    field_string += f" = Field({'default=None, ' if required else ''}foreign_key='{field.name.replace('_', '.')}', index=True)"
 
             self.logger.info(f"{field} converted to {field_string}")
             basemodel_fields.append(field_string)
