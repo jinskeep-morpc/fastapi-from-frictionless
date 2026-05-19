@@ -1,3 +1,12 @@
+## fix/quick-wins-105-109
+
+Fixed 5 code-review quick wins in parallel via feature-team:
+- #105: change detection loop in update_api_from_package — now uses a single any() over row.items() so any field difference triggers an update (previous loop reset changed=False each iteration and only reflected the last field).
+- #106: generated FK SQLModel Fields now include index=True for query performance on JOINs and FK filters.
+- #107: API key check now uses secrets.compare_digest(api_key or "", _API_KEY) and the template imports secrets — eliminates timing side channel.
+- #108: requests_post/requests_get_all/requests_update build URLs with f-strings ({server_url.rstrip('/')}/{endpoint}/...) instead of os.path.join, which corrupted https:// schemes on POSIX.
+- #109: requests_get_all initializes r = None before the try and guards r.close() with if r is not None — prevents UnboundLocalError when the session.get(...) itself raises.
+
 ## 2026-05-14 — Fix create_package absolute path rejected as unsafe by frictionless (#103)
 
 frictionless rejects absolute paths during package.validate(). Changed create_package to chdir to the Excel file's directory and reference it by relative basename. Schema files and output YAML accessed via absolute paths resolved from the schema folder.
