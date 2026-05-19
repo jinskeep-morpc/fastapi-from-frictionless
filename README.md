@@ -85,7 +85,8 @@ For each schema resource, the generated app exposes the following endpoints (rep
 |----------|---------|-------------|
 | `DATABASE_URL` | `sqlite:///database.db` | Database connection URL (overrides SQLite default) |
 | `ALLOWED_ORIGINS` | `*` | Comma-separated CORS allowed origins |
-| `API_KEY` | *(unset)* | If set, all requests require `X-API-Key: <value>` header |
+| `API_KEY` | *(required)* | All requests require `X-API-Key: <value>` header. App refuses to start if unset unless `ALLOW_NO_AUTH=true` is also set. |
+| `ALLOW_NO_AUTH` | *(unset)* | Set to `true` to start the app without `API_KEY` (dev only — logs a warning, do not use in production) |
 | `SCHEMA_FOLDER` | `.` | Path to `*.schema.yaml` files (used by Excel import/export) |
 | `API_URL` | `http://localhost:8000` | Base URL of this app (used by Excel export) |
 
@@ -169,7 +170,7 @@ Items are grouped by priority. Checked items are complete.
 - [ ] Database migrations via [Alembic](https://alembic.sqlalchemy.org/) instead of `create_all`
 - [x] Configuration management — accept settings via environment variables or a config file (database URL, allowed origins, etc.)
 - [x] CORS and security headers in generated `app.py`
-- [x] API key / token authentication ([FastAPI security](https://fastapi.tiangolo.com/tutorial/security/first-steps/))
+- [x] API key / token authentication ([FastAPI security](https://fastapi.tiangolo.com/tutorial/security/first-steps/)) — fail-closed: app refuses to start unless `API_KEY` is set or `ALLOW_NO_AUTH=true` is explicitly opted in
 - [x] Pagination on list endpoints
 - [x] Proper HTTP error responses with consistent JSON error bodies
 
