@@ -332,12 +332,7 @@ def update_api_from_package(api_url, package_file, skip=[], api_key: str = ""):
                     current_row = current_all.loc[current_all[current_all.columns[0]] == row_pk]
                     current_row = current_row.loc[[x for x in current_row.index][0]].to_dict()
 
-                    for k, v in row.items():
-                        changed = False
-                        if current_row[k] == v:
-                            continue
-                        else:
-                            changed = True
+                    changed = any(current_row.get(k) != v for k, v in row.items())
 
                     # if it is changed, update.
                     if changed:
