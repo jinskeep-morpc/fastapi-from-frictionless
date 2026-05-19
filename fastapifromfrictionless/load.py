@@ -213,6 +213,30 @@ def requests_post(
     return json
 
 
+def requests_bulk_post(
+    session: Session | None, server_url: str | os.PathLike, endpoint: str, rows: list, api_key: str = ""
+) -> list:
+    """POST a batch of rows to ``/{endpoint}s/bulk`` in a single request.
+
+    Returns the list of created records (server response JSON).
+    """
+    import requests
+
+    if session is None:
+        session = requests.Session()
+    url = f"{server_url.rstrip('/')}/{endpoint}s/bulk"
+    headers = {"X-API-Key": api_key} if api_key else {}
+    logger.debug(f"Bulk posting {len(rows)} rows to {url}.")
+    r = None
+    try:
+        r = session.post(url, json=rows, headers=headers)
+        r.raise_for_status()
+        return r.json()
+    finally:
+        if r is not None:
+            r.close()
+
+
 def requests_get_all(
     session: Session | None, server_url: str | os.PathLike, endpoint: str
 ) -> pd.DataFrame:
@@ -306,6 +330,7 @@ def update_api_from_package(api_url, package_file, skip=[], api_key: str = ""):
         loaded_rows = []
         updated_rows = []
         unchanged_rows = []
+        new_payloads: list = []
 
         # Open resource and stream rows
         with resource as resource:
@@ -324,9 +349,8 @@ def update_api_from_package(api_url, package_file, skip=[], api_key: str = ""):
 
                 # Check if the row exists in the current api table
                 if row_pk not in current_index:
-                    # if not, post to api
-                    logger.debug(f"Posting row: {row}")
-                    requests_post(session, server_url=api_url, endpoint=table_name, model=model)
+                    # Queue for bulk post
+                    new_payloads.append(model.model_dump(mode="json"))
                     loaded_rows.append(row_pk)
 
                 if row_pk in current_index:
@@ -348,6 +372,17 @@ def update_api_from_package(api_url, package_file, skip=[], api_key: str = ""):
                     else:
                         logger.debug(f"{row_pk} unchanged. Skipping...")
                         unchanged_rows.append(row_pk)
+
+        # Bulk POST any new rows for this table in a single request
+        if new_payloads:
+            logger.debug(f"Bulk posting {len(new_payloads)} rows to {table_name}")
+            requests_bulk_post(
+                session,
+                server_url=api_url,
+                endpoint=table_name,
+                rows=new_payloads,
+                api_key=api_key,
+            )
 
         logger.info(
             f"{resource.name.capitalize()} | Rows posted: {len(loaded_rows)}. Rows updated: {len(updated_rows)}. Rows unchanged: {len(unchanged_rows)}"

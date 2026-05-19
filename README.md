@@ -70,6 +70,7 @@ For each schema resource, the generated app exposes the following endpoints (rep
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/{resource}` | Create a record |
+| `POST` | `/{resource}s/bulk` | Create many records in a single request (one commit) |
 | `GET` | `/{resource}/all` | List all (paginated: `?offset=0&limit=100`) |
 | `GET` | `/{resource}/recent` | Most recent records (`?limit=10`) |
 | `GET` | `/{resource}/{id}` | Get one by primary key |
