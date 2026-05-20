@@ -13,8 +13,8 @@ This folder contains everything needed to run `fastapifromfrictionless` in a con
 | `Dockerfile` | Builds the API image; installs `fastapifromfrictionless` and uvicorn |
 | `entrypoint.sh` | Startup script: generates app from schemas, then launches uvicorn |
 | `nginx.conf.template` | nginx config template — `$PROJECT_NAME` is filled in at container start |
-| `setup.sh` | Adds `/etc/hosts` entries and starts the stack |
-| `teardown.sh` | Stops the stack and removes `/etc/hosts` entries |
+| `setup.sh` | Clears stale network bridge, adds `/etc/hosts` entries, builds, and starts the stack |
+| `teardown.sh` | Stops the stack, removes the network bridge, and removes `/etc/hosts` entries |
 | `.env.example` | Template for required environment variables |
 | `schemas/` | Place your `*.schema.yaml` files here |
 
@@ -28,6 +28,15 @@ sudo apt -y install podman podman-compose
 
 # Windows: see https://github.com/containers/podman/blob/main/docs/tutorials/podman-for-windows.md
 ```
+
+**Allow rootless Podman to bind to port 80** (one-time system change):
+
+```bash
+echo "net.ipv4.ip_unprivileged_port_start=80" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+```
+
+Without this, nginx will fail to start with a "permission denied" error on port 80.
 
 ## Setup
 
@@ -85,9 +94,10 @@ API_URL=http://my-project.api         # match your PROJECT_NAME
 ```
 
 `setup.sh` will:
-1. Add `{NGINX_IP} {PROJECT_NAME}.api` and `{NGINX_IP} {PROJECT_NAME}.pgadmin` to `/etc/hosts` (requires `sudo` once per deployment)
-2. Build the API image
-3. Start all four services
+1. Clear any stale network bridge left by a previous failed run (see [Troubleshooting](#troubleshooting))
+2. Add `{NGINX_IP} {PROJECT_NAME}.api` and `{NGINX_IP} {PROJECT_NAME}.pgadmin` to `/etc/hosts` (requires `sudo` once per deployment)
+3. Build the API image
+4. Start all four services
 
 On the first run, Podman pulls the PostGIS, pgAdmin, nginx, and pre-built base images (~1–2 min on a fast connection). Subsequent builds skip the `pip install` steps and are very fast.
 
@@ -156,10 +166,53 @@ rm -rf ./postgres/ ./pgadmin/
 
 ## Connecting to the database directly
 
-PostgreSQL is bound to `{NGINX_IP}:5432`. Connect from the host with:
+PostgreSQL host port exposure is disabled by default in `compose.yaml` to avoid conflicts with other stacks. To enable it, add the following under the `postgres` service:
+
+```yaml
+ports:
+  - ${NGINX_IP:-127.0.1.1}:5432:5432
+```
+
+Then connect from the host:
 
 ```bash
 psql -h 127.0.1.1 -p 5432 -U postgres -d mydb
+```
+
+> **Note:** A legacy deployment that binds postgres to `0.0.0.0:5432` will block this — `0.0.0.0` occupies the port on all interfaces, including your `NGINX_IP`. Stop the other stack's postgres or remove its port mapping first.
+
+## Troubleshooting
+
+### API can't connect to postgres / hostname resolution fails
+
+**Symptom:** Containers start, postgres is healthy, but the API exits with `could not translate host name "postgres"`.
+
+**Cause:** A stale bridge interface in the rootless network namespace. This happens when a previous run failed partway through — Podman leaves the bridge behind and silently reuses it on the next start. The bridge has the wrong gateway IP, so aardvark-dns never starts serving DNS for the network. Containers can still ping each other by IP, but service names don't resolve.
+
+**Fix:**
+
+```bash
+# Identify the stale bridge
+podman unshare --rootless-netns ip -brief addr
+
+# It will show the wrong IP for your network's bridge, e.g.:
+# podman2  UP  10.91.0.1/16   ← wrong, should be 10.93.0.1 for PODMAN_SUBNET=10.93.0
+
+# Delete it
+podman unshare --rootless-netns -- ip link delete podman2
+
+# Then restart cleanly
+./teardown.sh && ./setup.sh
+```
+
+`setup.sh` runs this cleanup automatically before each start, so on a normal workflow this should never need to be done manually.
+
+### nginx fails to start — "permission denied" on port 80
+
+Rootless Podman cannot bind to ports below 1024 by default. Apply the one-time fix from the [Prerequisites](#prerequisites) section:
+
+```bash
+echo "net.ipv4.ip_unprivileged_port_start=80" | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
 ```
 
 ## Pre-built base images
@@ -183,14 +236,14 @@ FROM ghcr.io/jinskeep-morpc/fastapi-from-frictionless-runtime:0.2.0
 
 ## Network layout
 
-All services share a private bridge network (`app_network`). Host-facing ports are bound to `NGINX_IP` only — no service listens on `0.0.0.0`.
+All services share a private bridge network (`app_network`). Host-facing ports are bound to `NGINX_IP` only — no service listens on `0.0.0.0`. Internal IPs use the `PODMAN_SUBNET` prefix (e.g. `10.93.0`).
 
 | Service | Internal IP | Exposed on host |
 |---------|-------------|-----------------|
-| `postgres` | `10.91.0.5` | `{NGINX_IP}:5432` |
-| `pgadmin` | `10.91.0.6` | internal only |
-| `api` | `10.91.0.7` | internal only |
-| `nginx` | `10.91.0.8` | `{NGINX_IP}:80` |
+| `postgres` | `{PODMAN_SUBNET}.5` | disabled by default (see [Connecting to the database directly](#connecting-to-the-database-directly)) |
+| `pgadmin` | `{PODMAN_SUBNET}.6` | internal only |
+| `api` | `{PODMAN_SUBNET}.7` | internal only |
+| `nginx` | `{PODMAN_SUBNET}.8` | `{NGINX_IP}:80` |
 
 ## Environment variable reference
 
