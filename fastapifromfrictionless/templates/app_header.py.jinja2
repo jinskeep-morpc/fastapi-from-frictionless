@@ -96,7 +96,7 @@ def get_session():
 # Excel file endpoints
 @app.get('/excel/export', response_class=FileResponse)
 async def export_excel(background_tasks: BackgroundTasks):
-    from fastapifromfrictionless.load import dump_to_excel
+    from fastapifromfrictionless.runtime import dump_to_excel
     with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
         tmp_path = tmp.name
     await asyncio.to_thread(
@@ -115,7 +115,7 @@ async def export_excel(background_tasks: BackgroundTasks):
 
 @app.post('/excel/import')
 async def import_excel(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
-    from fastapifromfrictionless.load import create_package, update_api_from_package
+    from fastapifromfrictionless.runtime import create_package, update_api_from_package
     content = await file.read()
     with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
         tmp.write(content)

@@ -45,7 +45,7 @@ def _mock_get_all(df_map):
     return _inner
 
 
-@patch("fastapifromfrictionless.load.requests_get_all")
+@patch("fastapifromfrictionless.runtime.excel.requests_get_all")
 def test_dump_writes_data_rows(mock_get, schema_folder, tmp_path):
     mock_get.side_effect = _mock_get_all(
         {
@@ -64,7 +64,7 @@ def test_dump_writes_data_rows(mock_get, schema_folder, tmp_path):
     assert sheets["sensor"].iloc[0]["name"] == "AQ-1"
 
 
-@patch("fastapifromfrictionless.load.requests_get_all")
+@patch("fastapifromfrictionless.runtime.excel.requests_get_all")
 def test_dump_empty_api_writes_headers_only(mock_get, schema_folder, tmp_path):
     mock_get.side_effect = _mock_get_all(
         {
@@ -80,7 +80,7 @@ def test_dump_empty_api_writes_headers_only(mock_get, schema_folder, tmp_path):
     assert len(sheets["location"]) == 0
 
 
-@patch("fastapifromfrictionless.load.requests_get_all")
+@patch("fastapifromfrictionless.runtime.excel.requests_get_all")
 def test_dump_endpoint_error_writes_empty_sheet(mock_get, schema_folder, tmp_path):
     """A failing endpoint should not abort the whole export — write an empty sheet."""
 
@@ -98,7 +98,7 @@ def test_dump_endpoint_error_writes_empty_sheet(mock_get, schema_folder, tmp_pat
     assert len(sheets["sensor"]) == 0
 
 
-@patch("fastapifromfrictionless.load.requests_get_all")
+@patch("fastapifromfrictionless.runtime.excel.requests_get_all")
 def test_dump_column_order_matches_schema(mock_get, schema_folder, tmp_path):
     """Columns in the output must follow schema field order, not API response order."""
     mock_get.side_effect = _mock_get_all(

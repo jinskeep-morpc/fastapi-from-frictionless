@@ -1,3 +1,16 @@
+## #114 — Split load.py into runtime/ and scaffolding.py
+
+Broke the god module `load.py` (360 lines, six unrelated responsibilities) into focused modules:
+- `scaffolding.py` — `build_database()` façade over the three generators
+- `runtime/excel.py` — `empty_excel`, `create_package`, `dump_to_excel`
+- `runtime/http.py` — `requests_post`, `requests_bulk_post`, `requests_get_all`, `requests_update`
+- `runtime/sync.py` — `update_api_from_package`, `get_model` (now accepts `models_module` arg to avoid `sys.path` assumption)
+- `runtime/__init__.py` — re-exports everything for clean `from fastapifromfrictionless.runtime import ...`
+- `load.py` replaced with a backward-compat shim re-exporting from the new locations
+All imports moved to module top level. Generated `app.py` template updated to import from `fastapifromfrictionless.runtime` instead of `fastapifromfrictionless.load`. Test patch targets updated to `fastapifromfrictionless.runtime.excel.requests_get_all`.
+
+---
+
 ## #113 — Extract SchemaContext and shared Jinja2 env
 
 Extracted `SchemaContext` (loads each `*.schema.yaml` once, exposes `name_of`, `foreign_keys_of`, `relationships_of`, `is_link_table`, `primary_key_of`) and moved the Jinja2 environment into `_templates.py`. All three generators (`models`, `app`, `database`) now import `_env` from `_templates.py`; `models` and `app` accept a `SchemaContext` or a folder path and no longer re-parse schemas on each iteration. Eliminates O(N²) disk reads and three verbatim copies of the Jinja2 `Environment` constructor. 14 new unit tests added in `tests/test_schema_context.py`.
