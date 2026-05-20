@@ -2,13 +2,10 @@
 # Tools for building SQLmodels from Frictionless Schemas
 
 import logging
-import os
 from os import PathLike
-from pathlib import Path
 
-import jinja2
-
-from .validate import assert_schemas_valid
+from ._templates import env as _env
+from .schema_context import SchemaContext
 
 logger = logging.getLogger(__name__)
 
@@ -36,105 +33,61 @@ type_map = {
     "any": {"default": "str"},
 }
 
-_TEMPLATES_DIR = Path(__file__).parent / "templates"
-
-_env = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(str(_TEMPLATES_DIR)),
-    variable_start_string="<<",
-    variable_end_string=">>",
-    block_start_string="<%",
-    block_end_string="%>",
-    comment_start_string="<#",
-    comment_end_string="#>",
-    trim_blocks=True,
-    lstrip_blocks=True,
-    keep_trailing_newline=True,
-)
-
-
 class models:
     _models_logger = logging.getLogger(__name__).getChild(__qualname__)
 
-    def __init__(self, folder: str | PathLike):
+    def __init__(self, folder: str | PathLike | SchemaContext):
         """
         Create a models.py file based on all frictionless schemas in a folder.
 
         parameters:
         -----------
-        folder : str | Pathlike
-            The location of the schema files
+        folder : str | PathLike | SchemaContext
+            The location of the schema files, or a pre-built SchemaContext.
 
         """
+        if isinstance(folder, SchemaContext):
+            self._ctx = folder
+        else:
+            self._ctx = SchemaContext(folder)
+
         self.logger = (
-            logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(folder))
+            logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(self._ctx.folder)
         )
-
-        assert_schemas_valid(folder)
-        self.folder: str = str(folder)
-
-        self.schemas = [x for x in os.listdir(folder) if x.endswith("schema.yaml")]
-        logger.info(f"Building models for schemas from {folder}: {' .'.join(self.schemas)}")
+        self.folder: str = self._ctx.folder
+        self.schemas = self._ctx.filenames
+        logger.info(f"Building models for schemas from {self.folder}: {' .'.join(self.schemas)}")
 
     def build(self) -> "models":
         self.models: list[str] = []
         for filename in self.schemas:
             self.logger.info(f"Building model for {filename}")
-            model = self.build_model(self.folder, filename)
+            model = self.build_model(filename)
             self.models.append(model)
 
         self.has_geo = any("Geometry" in m for m in self.models)
         return self
 
-    def build_model(self, folder: str, filename: str) -> str:
-        """Build the individual models for a schema via Jinja2 template.
+    def build_model(self, filename: str) -> str:
+        """Build the individual models for a schema via Jinja2 template."""
+        ctx = self._ctx
+        name = ctx.name_of(filename)
+        schema = ctx.schema_of(filename)
 
-        parameters:
-        -----------
-        folder: str
-            the folder where the schema is saved.
-        filename: str
-            the full filename of the schema.
-        """
-        import frictionless
-
-        filepath = os.path.join(folder, filename)
-
-        name = filename.split(".")[0].replace("-", " ").title().replace(" ", "")
-
-        if not os.path.exists(filepath):
-            self.logger.error(f"{filepath} does not exist.")
-
-        try:
-            schema = frictionless.Schema(filepath)
-        except Exception as e:
-            self.logger.error(f"{e}")
-
-        foreign_keys = [x["fields"][0] for x in schema.foreign_keys]
+        foreign_keys = ctx.foreign_keys_of(filename)
         self.logger.info(f"Schema {name} foreign keys {foreign_keys}")
 
-        relationships = []
-        for other_filename in self.schemas:
-            if other_filename != filename:
-                other_filepath = os.path.join(folder, other_filename)
-                other_name = other_filename.split(".")[0].replace("-", " ").title().replace(" ", "")
-                other_schema = frictionless.Schema(other_filepath)
-                if len(other_schema.foreign_keys) > 0:
-                    for fk in other_schema.foreign_keys:
-                        if fk["reference"]["resource"] == name.lower():
-                            self.logger.debug(f"{name} is referenced by {other_name}")
-                            relationships.append(other_name)
-                        else:
-                            self.logger.debug(f"{name} not referenced by {other_name}")
-        if len(relationships) == 0:
+        relationships = ctx.relationships_of(filename)
+        if not relationships:
             self.logger.info(f"{name} not referenced by other schemas.")
         else:
             self.logger.info(f"{name} is referenced by {relationships}")
 
-        auto_id = "id" in schema.primary_key
+        auto_id = ctx.primary_key_of(filename) == "id" and len(schema.primary_key) == 1
         if auto_id:
             self.logger.info("Primary key is 'id'. Will add to table model with autoincrement.")
 
-        link_table = (len(foreign_keys) == 2) and (len(schema.primary_key) == 2)
+        link_table = ctx.is_link_table(filename)
         if link_table:
             self.logger.info(f"{name} is a many-to-many link table.")
 

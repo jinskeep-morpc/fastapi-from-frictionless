@@ -165,6 +165,7 @@ Items are grouped by priority. Checked items are complete.
 - [x] Replace raw string generation with a templating engine (e.g. Jinja2) for maintainability
 - [x] Structured logging with configurable verbosity
 - [x] Complete Frictionless field type coverage — all standard types map to concrete Python/SQLAlchemy types; `geoalchemy2` import emitted only when geo types are present; unknown types fall back gracefully
+- [x] Extract `SchemaContext` to eliminate triplicated schema parsing — schemas loaded once per run; shared Jinja2 environment in `_templates.py`; consistent name derivation and FK/link-table detection across all generators
 - [x] Split `load.py` god module into `runtime/` (excel, http, sync) and `scaffolding.py`; generated apps import from `fastapifromfrictionless.runtime` only, decoupling runtime from the generator toolchain
 
 ### Production Readiness
