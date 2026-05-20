@@ -51,7 +51,7 @@ fastapifromfrictionless generate path/to/schemas --output path/to/output
 Or from Python:
 
 ```python
-from fastapifromfrictionless.load import build_database
+from fastapifromfrictionless.scaffolding import build_database
 
 build_database(schema_folder="path/to/schemas", db_filename="app.db")
 ```
@@ -94,7 +94,9 @@ For each schema resource, the generated app exposes the following endpoints (rep
 ### 5. Excel data workflow
 
 ```python
-from fastapifromfrictionless.load import empty_excel, create_package, update_api_from_package
+from fastapifromfrictionless.runtime import (
+    empty_excel, create_package, update_api_from_package, dump_to_excel
+)
 
 # Create a blank workbook with one sheet per schema
 empty_excel(schema_folder="path/to/schemas", output_filepath="data.xlsx")
@@ -104,7 +106,6 @@ create_package(folder="path/to/schemas", filename="data.xlsx")
 update_api_from_package(api_url="http://localhost:8000", package_file="data.package.yaml")
 
 # Or export all current API data to Excel
-from fastapifromfrictionless.load import dump_to_excel
 dump_to_excel(api_url="http://localhost:8000", schema_folder="path/to/schemas", output_filepath="export.xlsx")
 ```
 
@@ -142,56 +143,3 @@ cp .env.example .env          # set PROJECT_NAME, NGINX_IP, passwords, and setti
 After schema changes, re-run `podman-compose build api` then `podman-compose up -d api`. To stop and clean up, run `./teardown.sh`.
 
 See [`podman/README.md`](podman/README.md) for full instructions.
-
-## Roadmap
-
-Items are grouped by priority. Checked items are complete.
-
-### Foundation
-
-- [x] Generate SQLModel class hierarchies from Frictionless schemas
-- [x] Generate FastAPI CRUD + query endpoints per resource
-- [x] Generate `database.py` with SQLite engine setup
-- [x] Excel workbook as data-entry interface (create and update)
-- [x] Frictionless package wrapping for field-level validation
-- [x] Export API data back to Excel (dump all records to workbook)
-- [x] Validate schemas before code generation; surface clear error messages on malformed input
-
-### Code Quality & Reliability
-
-- [x] Add a test suite (unit tests for generators, integration tests for generated app)
-- [x] Add CI pipeline (lint, type-check, tests on push)
-- [x] Enforce type hints throughout; run `mypy` in CI
-- [x] Replace raw string generation with a templating engine (e.g. Jinja2) for maintainability
-- [x] Structured logging with configurable verbosity
-- [x] Complete Frictionless field type coverage — all standard types map to concrete Python/SQLAlchemy types; `geoalchemy2` import emitted only when geo types are present; unknown types fall back gracefully
-- [x] Extract `SchemaContext` to eliminate triplicated schema parsing — schemas loaded once per run; shared Jinja2 environment in `_templates.py`; consistent name derivation and FK/link-table detection across all generators
-- [x] Split `load.py` god module into `runtime/` (excel, http, sync) and `scaffolding.py`; generated apps import from `fastapifromfrictionless.runtime` only, decoupling runtime from the generator toolchain
-
-### Production Readiness
-
-- [ ] Async database support (replace sync SQLModel sessions with async SQLAlchemy)
-- [ ] Database migrations via [Alembic](https://alembic.sqlalchemy.org/) instead of `create_all`
-- [x] Configuration management — accept settings via environment variables or a config file (database URL, allowed origins, etc.)
-- [x] CORS and security headers in generated `app.py`
-- [x] API key / token authentication ([FastAPI security](https://fastapi.tiangolo.com/tutorial/security/first-steps/)) — fail-closed: app refuses to start unless `API_KEY` is set or `ALLOW_NO_AUTH=true` is explicitly opted in
-- [x] Pagination on list endpoints
-- [x] Proper HTTP error responses with consistent JSON error bodies
-
-### Developer Experience
-
-- [x] CLI entry point (`fastapifromfrictionless generate <schema-folder>`) so users do not need to write Python
-- [x] Dry-run / preview mode that prints generated code without writing files
-- [x] Configurable output — opt in/out of specific endpoint types, choose database backend
-- [x] Package versioning and automated releases (GitHub Actions → PyPI)
-- [x] Expand documentation and examples in `doc/`
-
-### Optional / Future
-
-- [x] Support for PostgreSQL and other SQLAlchemy-compatible backends
-- [x] Podman/container deployment (Compose stack with PostGIS, pgAdmin, FastAPI, and nginx reverse proxy; hostname-based routing via per-deployment loopback IP so multiple stacks run simultaneously without port conflicts; multi-stage Dockerfile with pre-built base images on ghcr.io; version-pinned builds with PyPI availability polling to prevent CDN lag)
-- [x] All runtime dependencies declared in base package (`frictionless`, `python-multipart`, `geoalchemy2`) — generated app works out of the box without extras
-- [ ] Auto-generated front-end form from schema fields
-- [ ] DrawIO ERD → Frictionless schema converter
-- [x] Default query routes for common patterns derived from schema metadata
-- [x] GET/POST file endpoints for uploading and downloading the Excel workbook directly via the API
