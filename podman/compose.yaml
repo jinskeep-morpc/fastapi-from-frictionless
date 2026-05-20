@@ -1,8 +1,14 @@
 # compose.yaml
 #
-# Three services: PostGIS database, pgAdmin web UI, and the generated FastAPI application.
-# Copy this file, Dockerfile, entrypoint.sh, and .env.example to your
-# deployment folder, then follow the README to get started.
+# Four services: PostGIS database, pgAdmin web UI, the generated FastAPI application,
+# and an nginx reverse proxy.
+#
+# Access via hostname (set up by setup.sh):
+#   http://{PROJECT_NAME}.api       → FastAPI
+#   http://{PROJECT_NAME}.pgadmin   → pgAdmin
+#
+# Copy this file, Dockerfile, entrypoint.sh, nginx.conf.template, and .env.example
+# to your deployment folder, then run ./setup.sh to get started.
 
 services:
   postgres:
@@ -14,7 +20,7 @@ services:
     volumes:
       - ./postgres:/var/lib/postgresql/data:Z
     ports:
-      - 5432:5432
+      - ${NGINX_IP:-127.0.1.1}:5432:5432
     networks:
       app_network:
         ipv4_address: 10.91.0.5
@@ -33,8 +39,6 @@ services:
       - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
     volumes:
       - ./pgadmin:/var/lib/pgadmin:Z
-    ports:
-      - 8080:80
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,11 +59,9 @@ services:
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
       - API_KEY=${API_KEY}
       - SCHEMA_FOLDER=/schemas
-      - API_URL=${API_URL:-http://localhost:8000}
+      - API_URL=${API_URL}
     volumes:
       - ./${SCHEMA_FOLDER:-schemas}:/schemas:Z
-    ports:
-      - 8000:8000
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,6 +70,27 @@ services:
         ipv4_address: 10.91.0.7
         aliases:
           - api
+
+  nginx:
+    image: docker.io/nginx:alpine
+    volumes:
+      - ./nginx.conf.template:/nginx.conf.template:ro,Z
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME}
+    command: >
+      /bin/sh -c
+      "envsubst '$$PROJECT_NAME' < /nginx.conf.template > /etc/nginx/nginx.conf
+      && nginx -g 'daemon off;'"
+    ports:
+      - ${NGINX_IP:-127.0.1.1}:80:80
+    depends_on:
+      - api
+      - pgadmin
+    networks:
+      app_network:
+        ipv4_address: 10.91.0.8
+        aliases:
+          - nginx
 
 networks:
   app_network:
