@@ -126,19 +126,20 @@ See [`doc/quickstart.ipynb`](doc/quickstart.ipynb) for a step-by-step walkthroug
 
 ## Deployment
 
-A ready-to-use Podman deployment lives in `podman/`. It spins up three containers — PostGIS database, pgAdmin web UI, and the generated FastAPI app — with no manual setup beyond dropping schemas into a folder and filling in a `.env` file.
+A ready-to-use Podman deployment lives in `podman/`. It spins up four containers — PostGIS database, pgAdmin web UI, the generated FastAPI app, and an nginx reverse proxy — so multiple deployments can run simultaneously on the same machine without port conflicts.
+
+Each deployment gets a unique loopback IP (`NGINX_IP`) and a project name (`PROJECT_NAME`). Services are then available at `http://{PROJECT_NAME}.api` and `http://{PROJECT_NAME}.pgadmin` with no port numbers in the URL.
 
 The API image uses a **two-stage build**: Stage 1 generates FastAPI code from your schemas; Stage 2 produces a lean runtime image. Both stages pull **pre-built base images** from ghcr.io, so only the copy and generation steps run locally — no pip installs required.
 
 ```bash
 cd podman/
-cp .env.example .env          # fill in passwords and settings
+cp .env.example .env          # set PROJECT_NAME, NGINX_IP, passwords, and settings
 # add *.schema.yaml files to schemas/
-podman-compose build api      # generate app code from your schemas (~20 s)
-podman-compose up -d          # start all three containers
+./setup.sh                    # adds /etc/hosts entries, builds, and starts all containers
 ```
 
-After schema changes, re-run `podman-compose build api` then `podman-compose up -d api`.
+After schema changes, re-run `podman-compose build api` then `podman-compose up -d api`. To stop and clean up, run `./teardown.sh`.
 
 See [`podman/README.md`](podman/README.md) for full instructions.
 
@@ -187,7 +188,7 @@ Items are grouped by priority. Checked items are complete.
 ### Optional / Future
 
 - [x] Support for PostgreSQL and other SQLAlchemy-compatible backends
-- [x] Podman/container deployment (Compose stack with PostGIS, pgAdmin, and FastAPI; multi-stage Dockerfile with pre-built base images on ghcr.io; version-pinned builds with PyPI availability polling to prevent CDN lag)
+- [x] Podman/container deployment (Compose stack with PostGIS, pgAdmin, FastAPI, and nginx reverse proxy; hostname-based routing via per-deployment loopback IP so multiple stacks run simultaneously without port conflicts; multi-stage Dockerfile with pre-built base images on ghcr.io; version-pinned builds with PyPI availability polling to prevent CDN lag)
 - [x] All runtime dependencies declared in base package (`frictionless`, `python-multipart`, `geoalchemy2`) — generated app works out of the box without extras
 - [ ] Auto-generated front-end form from schema fields
 - [ ] DrawIO ERD → Frictionless schema converter
