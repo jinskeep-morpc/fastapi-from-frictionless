@@ -1,3 +1,7 @@
+## #113 — Extract SchemaContext and shared Jinja2 env
+
+Extracted `SchemaContext` (loads each `*.schema.yaml` once, exposes `name_of`, `foreign_keys_of`, `relationships_of`, `is_link_table`, `primary_key_of`) and moved the Jinja2 environment into `_templates.py`. All three generators (`models`, `app`, `database`) now import `_env` from `_templates.py`; `models` and `app` accept a `SchemaContext` or a folder path and no longer re-parse schemas on each iteration. Eliminates O(N²) disk reads and three verbatim copies of the Jinja2 `Environment` constructor. 14 new unit tests added in `tests/test_schema_context.py`.
+
 ## fix/security-and-background-tasks-110-111-115
 
 Three template-level fixes to the generated FastAPI app, all in `app_header.py.jinja2`:
