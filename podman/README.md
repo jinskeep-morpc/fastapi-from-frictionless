@@ -1,6 +1,7 @@
 # Podman Deployment
 
 Deploy a generated FastAPI application alongside a PostGIS database and pgAdmin using Podman Compose.
+Services are accessed via local hostnames (`{project}.api`, `{project}.pgadmin`) routed through an nginx reverse proxy, so multiple deployments can run simultaneously on the same machine without port conflicts.
 
 ## Overview
 
@@ -8,9 +9,12 @@ This folder contains everything needed to run `fastapifromfrictionless` in a con
 
 | File | Purpose |
 |------|---------|
-| `compose.yaml` | Defines the `postgres` (PostGIS), `pgadmin`, and `api` (FastAPI) services |
+| `compose.yaml` | Defines the `postgres`, `pgadmin`, `api`, and `nginx` services |
 | `Dockerfile` | Builds the API image; installs `fastapifromfrictionless` and uvicorn |
 | `entrypoint.sh` | Startup script: generates app from schemas, then launches uvicorn |
+| `nginx.conf.template` | nginx config template — `$PROJECT_NAME` is filled in at container start |
+| `setup.sh` | Adds `/etc/hosts` entries and starts the stack |
+| `teardown.sh` | Stops the stack and removes `/etc/hosts` entries |
 | `.env.example` | Template for required environment variables |
 | `schemas/` | Place your `*.schema.yaml` files here |
 
@@ -36,6 +40,9 @@ my-deployment/
   compose.yaml
   Dockerfile
   entrypoint.sh
+  nginx.conf.template
+  setup.sh
+  teardown.sh
   .env.example
   schemas/          # your *.schema.yaml files go here
 ```
@@ -50,9 +57,13 @@ Copy your `*.schema.yaml` files into the `schemas/` folder. See `doc/data/` in t
 cp .env.example .env
 ```
 
-Edit `.env` with real values:
+Edit `.env` with real values. The two new routing variables are the most important:
 
 ```
+# Unique per deployment — drives hostnames and isolates ports
+PROJECT_NAME=my-project       # results in my-project.api and my-project.pgadmin
+NGINX_IP=127.0.1.1            # unique loopback IP; use 127.0.1.2 for a second stack, etc.
+
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=a_strong_random_password
 POSTGRES_DB=mydb
@@ -62,59 +73,59 @@ PGADMIN_DEFAULT_PASSWORD=another_strong_password
 
 API_KEY=yet_another_strong_password   # or leave empty to disable auth
 ALLOWED_ORIGINS=*
-API_URL=http://localhost:8000
+API_URL=http://my-project.api         # match your PROJECT_NAME
 ```
 
 > **Security**: `.env` is listed in `.gitignore`. Never commit it.
 
-### 4. Build and start the services
-
-The API image uses a **two-stage build**: Stage 1 generates the FastAPI application from your schemas; Stage 2 produces a lean runtime image without the generation tools.
-
-Both stages pull **pre-built base images** from ghcr.io that already have all Python dependencies installed. Your build only runs the `COPY` and code-generation steps — no pip installs.
+### 4. Build and start
 
 ```bash
-# Build the API image (pulls pre-built bases, copies schemas, generates app code)
-podman-compose build api
-
-# Start all three services
-podman-compose up -d
+./setup.sh
 ```
 
-The first run pulls the PostGIS, pgAdmin, and pre-built base images (~1–2 min on a fast connection). Subsequent builds are very fast — the base images are cached locally.
+`setup.sh` will:
+1. Add `{NGINX_IP} {PROJECT_NAME}.api` and `{NGINX_IP} {PROJECT_NAME}.pgadmin` to `/etc/hosts` (requires `sudo` once per deployment)
+2. Build the API image
+3. Start all four services
 
-On startup the API container:
-
-1. Connects to the PostGIS database (waits for it to be healthy)
-2. Creates all tables via SQLModel
-3. Starts uvicorn on port 8000 — no generation step at runtime
+On the first run, Podman pulls the PostGIS, pgAdmin, nginx, and pre-built base images (~1–2 min on a fast connection). Subsequent builds skip the `pip install` steps and are very fast.
 
 ### 5. Verify
 
 ```bash
-# Check that all three containers are running
+# Check that all four containers are running
 podman-compose ps
 
 # View API logs
 podman-compose logs api
-
-# Test the API
-curl http://localhost:8000/docs
 ```
 
 | Service | URL |
 |---------|-----|
-| API docs | http://localhost:8000/docs |
-| pgAdmin | http://localhost:8080 |
+| API docs | `http://{PROJECT_NAME}.api/docs` |
+| pgAdmin | `http://{PROJECT_NAME}.pgadmin` |
+| Postgres (host) | `{NGINX_IP}:5432` |
+
+### Running multiple stacks simultaneously
+
+Each stack must use a different `PROJECT_NAME` and `NGINX_IP`:
+
+| Deployment | `PROJECT_NAME` | `NGINX_IP` | API URL |
+|------------|---------------|------------|---------|
+| Stack 1 | `project-a` | `127.0.1.1` | http://project-a.api |
+| Stack 2 | `project-b` | `127.0.1.2` | http://project-b.api |
+
+Linux supports the full `127.0.0.0/8` loopback range, so there are 16 million available IPs.
 
 ## Using pgAdmin
 
-1. Open **http://localhost:8080** in your browser.
+1. Open `http://{PROJECT_NAME}.pgadmin` in your browser.
 2. Log in with `PGADMIN_DEFAULT_EMAIL` and `PGADMIN_DEFAULT_PASSWORD` from your `.env`.
 3. Click **Add New Server** (or right-click Servers → Register → Server).
 4. In the **General** tab, give the server a name (e.g. `app-db`).
 5. In the **Connection** tab:
-   - **Host**: `10.91.0.5` (the postgres container IP)
+   - **Host**: `postgres` (the service alias inside the container network)
    - **Port**: `5432`
    - **Username**: value of `POSTGRES_USER` in your `.env`
    - **Password**: value of `POSTGRES_PASSWORD` in your `.env`
@@ -132,25 +143,23 @@ podman-compose build api
 podman-compose up -d api
 ```
 
-The schemas are baked into the image during the build. The `schemas/` volume is still mounted at runtime so the Excel import/export endpoints can read the schema definitions.
-
 ## Stopping and cleaning up
 
 ```bash
-# Stop containers (data is preserved in ./postgres/ and ./pgadmin/)
-podman-compose down
+# Stop containers and remove /etc/hosts entries
+./teardown.sh
 
-# Stop and delete all data volumes (destructive)
-podman-compose down -v
+# Also delete persisted data (destructive)
+./teardown.sh
 rm -rf ./postgres/ ./pgadmin/
 ```
 
 ## Connecting to the database directly
 
-The PostgreSQL service is exposed on port 5432. Connect from the host with:
+PostgreSQL is bound to `{NGINX_IP}:5432`. Connect from the host with:
 
 ```bash
-psql -h localhost -p 5432 -U postgres -d mydb
+psql -h 127.0.1.1 -p 5432 -U postgres -d mydb
 ```
 
 ## Pre-built base images
@@ -174,27 +183,28 @@ FROM ghcr.io/jinskeep-morpc/fastapi-from-frictionless-runtime:0.2.0
 
 ## Network layout
 
-All services share a private bridge network (`app_network`):
+All services share a private bridge network (`app_network`). Host-facing ports are bound to `NGINX_IP` only — no service listens on `0.0.0.0`.
 
-| Service | IP | Port |
-|---------|----|------|
-| `postgres` | `10.91.0.5` | `5432` |
-| `pgadmin` | `10.91.0.6` | `8080` → `80` |
-| `api` | `10.91.0.7` | `8000` |
-
-The API connects to postgres using the service alias `postgres` as the hostname (via `DATABASE_URL`).
+| Service | Internal IP | Exposed on host |
+|---------|-------------|-----------------|
+| `postgres` | `10.91.0.5` | `{NGINX_IP}:5432` |
+| `pgadmin` | `10.91.0.6` | internal only |
+| `api` | `10.91.0.7` | internal only |
+| `nginx` | `10.91.0.8` | `{NGINX_IP}:80` |
 
 ## Environment variable reference
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `PROJECT_NAME` | — | Hostname prefix; produces `{PROJECT_NAME}.api` and `{PROJECT_NAME}.pgadmin` |
+| `NGINX_IP` | `127.0.1.1` | Loopback IP for this deployment; must be unique per simultaneous stack |
 | `POSTGRES_USER` | — | PostgreSQL superuser name |
 | `POSTGRES_PASSWORD` | — | PostgreSQL superuser password |
 | `POSTGRES_DB` | — | Database name to create on first run |
 | `PGADMIN_DEFAULT_EMAIL` | — | Login email for the pgAdmin web UI |
 | `PGADMIN_DEFAULT_PASSWORD` | — | Login password for the pgAdmin web UI |
 | `DATABASE_URL` | *(set by compose)* | SQLAlchemy connection URL; automatically constructed from the postgres credentials |
-| `SCHEMA_FOLDER` | `schemas` | Host-side folder name containing `*.schema.yaml` files; used as the Docker build context and the runtime volume mount |
+| `SCHEMA_FOLDER` | `schemas` | Host-side folder name containing `*.schema.yaml` files |
 | `API_KEY` | *(unset)* | If set, all API requests require `X-API-Key: <value>` header |
 | `ALLOWED_ORIGINS` | `*` | Comma-separated CORS allowed origins |
-| `API_URL` | `http://localhost:8000` | Public base URL (used by the Excel export endpoint) |
+| `API_URL` | `http://{PROJECT_NAME}.api` | Public base URL (used by the Excel export endpoint) |

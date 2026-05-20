@@ -1,3 +1,9 @@
+## feat(#119): nginx reverse proxy with per-deployment loopback IP routing
+
+Added nginx reverse proxy to the podman deployment stack so multiple deployments can run simultaneously without port conflicts. Each deployment is assigned a unique loopback IP (`NGINX_IP`, e.g. `127.0.1.1`) that nginx and postgres both bind to on the host. The nginx config is generated at container start via `envsubst` from `nginx.conf.template`, substituting only `$PROJECT_NAME` so nginx variables like `$host` are preserved. `setup.sh` adds two `/etc/hosts` entries (`{NGINX_IP} {PROJECT_NAME}.api` and `{NGINX_IP} {PROJECT_NAME}.pgadmin`) with one `sudo` prompt, then builds and starts the stack. `teardown.sh` reverses this. Host port mappings for `api` (8000) and `pgadmin` (8080) were removed — all HTTP access now goes through nginx on port 80.
+
+---
+
 ## fix/security-and-background-tasks-110-111-115
 
 Three template-level fixes to the generated FastAPI app, all in `app_header.py.jinja2`:
@@ -220,5 +226,3 @@ Added `dump_to_excel(api_url, schema_folder, output_filepath)` to `load.py`. Fet
 Rewrote README to replace the rough WIP checklist with a proper package overview, requirements list, Quick Start, and a structured production roadmap (Foundation → Code Quality → Production Readiness → Developer Experience → Optional). Also added CLAUDE.md with the 9-step development workflow and coding guidelines. No code changes.
 
 ---
-
-

@@ -16,34 +16,34 @@ Podman and Docker are largely compatible — they use the same image format and 
 
 ---
 
-## The three-container system
+## The four-container system
 
-The deployment runs three containers that work together:
+The deployment runs four containers that work together:
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        app_network  (10.91.0.0/24)                  │
-│                                                                     │
-│   ┌──────────────────┐    SQL     ┌─────────────────────────────┐   │
-│   │   postgres        │◄──────────│   api                       │   │
-│   │   10.91.0.5       │           │   10.91.0.7                 │   │
-│   │   PostGIS image   │           │   generated FastAPI app     │   │
-│   │   port 5432       │           │   port 8000                 │   │
-│   └──────────────────┘           └─────────────────────────────┘   │
-│            ▲                                                        │
-│            │  SQL                                                   │
-│   ┌──────────────────┐                                              │
-│   │   pgadmin         │                                             │
-│   │   10.91.0.6       │                                             │
-│   │   pgAdmin 4 image │                                             │
-│   │   port 8080       │                                             │
-│   └──────────────────┘                                              │
-└─────────────────────────────────────────────────────────────────────┘
-         │                    │
-     host:5432            host:8000
-    (database)             (API)
-                          host:8080
-                          (pgAdmin)
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          app_network  (10.91.0.0/24)                     │
+│                                                                          │
+│   ┌──────────────────┐    SQL     ┌──────────────────────────────────┐   │
+│   │   postgres        │◄──────────│   api                            │   │
+│   │   10.91.0.5       │           │   10.91.0.7                      │   │
+│   │   PostGIS image   │           │   generated FastAPI app          │   │
+│   │   port 5432       │           │   port 8000 (internal only)      │   │
+│   └──────────────────┘           └──────────────────────────────────┘   │
+│            ▲                                          ▲                  │
+│            │  SQL                                     │  proxy           │
+│   ┌──────────────────┐           ┌──────────────────────────────────┐   │
+│   │   pgadmin         │           │   nginx                          │   │
+│   │   10.91.0.6       │◄──────────│   10.91.0.8                      │   │
+│   │   pgAdmin 4 image │  proxy    │   reverse proxy                  │   │
+│   │   port 80         │           │   port 80                        │   │
+│   │   (internal only) │           └──────────────────────────────────┘   │
+│   └──────────────────┘                                                   │
+└──────────────────────────────────────────────────────────────────────────┘
+              │                              │
+       {NGINX_IP}:5432               {NGINX_IP}:80
+          (postgres)            {PROJECT_NAME}.api
+                                {PROJECT_NAME}.pgadmin
 ```
 
 | Container | Image | Purpose |
@@ -51,14 +51,47 @@ The deployment runs three containers that work together:
 | `postgres` | `docker.io/postgis/postgis` | The database. PostGIS extends standard PostgreSQL with support for geographic data types (points, polygons, etc.) |
 | `pgadmin` | `docker.io/dpage/pgadmin4` | A web-based graphical interface for browsing and editing the database directly |
 | `api` | Built locally from `Dockerfile` | The generated FastAPI application |
+| `nginx` | `docker.io/nginx:alpine` | Reverse proxy — routes `{project}.api` to the API and `{project}.pgadmin` to pgAdmin |
 
 ### Why a private network?
 
-All three containers are placed on a private bridge network (`app_network`) with the subnet `10.91.0.0/24`. This means:
+All four containers are placed on a private bridge network (`app_network`) with the subnet `10.91.0.0/24`. This means:
 
 - Containers talk to each other using their **service names** as hostnames (e.g. `postgres`, not `10.91.0.5`). The `DATABASE_URL` in the API container uses `@postgres:5432` because `postgres` resolves to `10.91.0.5` inside the network.
 - Traffic between containers **never leaves the host machine** — it stays on the virtual network.
-- The ports exposed to the outside (`5432`, `8000`, `8080`) are the only doors into the system from the host.
+- Only nginx (port 80) and postgres (port 5432) are exposed to the host. Both are bound to `NGINX_IP`, not `0.0.0.0`.
+
+### How hostname routing works
+
+The nginx container receives `PROJECT_NAME` as an environment variable at startup. A small shell one-liner runs `envsubst` to fill `$PROJECT_NAME` into `nginx.conf.template` before nginx starts:
+
+```
+nginx.conf.template  +  PROJECT_NAME=my-project
+            │
+            │  envsubst '$PROJECT_NAME'
+            ▼
+        nginx.conf
+          server_name my-project.api      → proxy_pass http://api:8000
+          server_name my-project.pgadmin  → proxy_pass http://pgadmin:80
+```
+
+The `setup.sh` script adds the matching entries to `/etc/hosts`:
+
+```
+127.0.1.1   my-project.api
+127.0.1.1   my-project.pgadmin
+```
+
+### Running multiple stacks without port conflicts
+
+Each deployment is assigned a unique loopback IP via `NGINX_IP`. Linux treats the entire `127.0.0.0/8` range as loopback, so `127.0.1.1`, `127.0.1.2`, and so on all work without any extra network configuration.
+
+```
+127.0.1.1:80  →  stack A nginx  →  project-a.api / project-a.pgadmin
+127.0.1.2:80  →  stack B nginx  →  project-b.api / project-b.pgadmin
+```
+
+Postgres for each stack is similarly bound to its `NGINX_IP`, so `127.0.1.1:5432` and `127.0.1.2:5432` never conflict either.
 
 ---
 
