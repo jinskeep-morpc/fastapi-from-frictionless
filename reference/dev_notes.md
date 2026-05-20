@@ -1,3 +1,14 @@
+## #114 — Split load.py into runtime/ and scaffolding.py
+
+Broke the god module `load.py` (360 lines, six unrelated responsibilities) into focused modules:
+- `scaffolding.py` — `build_database()` façade over the three generators
+- `runtime/excel.py` — `empty_excel`, `create_package`, `dump_to_excel`
+- `runtime/http.py` — `requests_post`, `requests_bulk_post`, `requests_get_all`, `requests_update`
+- `runtime/sync.py` — `update_api_from_package`, `get_model` (now accepts `models_module` arg to avoid `sys.path` assumption)
+- `runtime/__init__.py` — re-exports everything for clean `from fastapifromfrictionless.runtime import ...`
+- `load.py` replaced with a backward-compat shim re-exporting from the new locations
+All imports moved to module top level. Generated `app.py` template updated to import from `fastapifromfrictionless.runtime` instead of `fastapifromfrictionless.load`. Test patch targets updated to `fastapifromfrictionless.runtime.excel.requests_get_all`.
+
 ## feat(#119): nginx reverse proxy with per-deployment loopback IP routing
 
 Added nginx reverse proxy to the podman deployment stack so multiple deployments can run simultaneously without port conflicts. Each deployment is assigned a unique loopback IP (`NGINX_IP`, e.g. `127.0.1.1`) that nginx and postgres both bind to on the host. The nginx config is generated at container start via `envsubst` from `nginx.conf.template`, substituting only `$PROJECT_NAME` so nginx variables like `$host` are preserved. `setup.sh` adds two `/etc/hosts` entries (`{NGINX_IP} {PROJECT_NAME}.api` and `{NGINX_IP} {PROJECT_NAME}.pgadmin`) with one `sudo` prompt, then builds and starts the stack. `teardown.sh` reverses this. Host port mappings for `api` (8000) and `pgadmin` (8080) were removed — all HTTP access now goes through nginx on port 80.
