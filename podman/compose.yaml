@@ -23,7 +23,7 @@ services:
       - ${NGINX_IP:-127.0.1.1}:5432:5432
     networks:
       app_network:
-        ipv4_address: 10.91.0.5
+        ipv4_address: ${SUBNET_BASE:-10.91}.0.5
         aliases:
           - postgres
     healthcheck:
@@ -44,7 +44,7 @@ services:
         condition: service_healthy
     networks:
       app_network:
-        ipv4_address: 10.91.0.6
+        ipv4_address: ${SUBNET_BASE:-10.91}.0.6
         aliases:
           - pgadmin
 
@@ -67,7 +67,7 @@ services:
         condition: service_healthy
     networks:
       app_network:
-        ipv4_address: 10.91.0.7
+        ipv4_address: ${SUBNET_BASE:-10.91}.0.7
         aliases:
           - api
 
@@ -88,7 +88,7 @@ services:
       - pgadmin
     networks:
       app_network:
-        ipv4_address: 10.91.0.8
+        ipv4_address: ${SUBNET_BASE:-10.91}.0.8
         aliases:
           - nginx
 
@@ -97,6 +97,6 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 10.91.0.0/16
-          ip_range: 10.91.0.0/24
-          gateway: 10.91.0.1
+        - subnet: ${SUBNET_BASE:-10.91}.0.0/16
+          ip_range: ${SUBNET_BASE:-10.91}.0.0/24
+          gateway: ${SUBNET_BASE:-10.91}.0.1
