@@ -1,9 +1,16 @@
 # Stage 1 — generate the FastAPI application from schemas
 #
-# Uses the pre-built generator image (deps already installed).
-# Copies schemas into /schemas and runs the CLI to produce /generator/api/.
-# Nothing from this stage carries into the final image.
-FROM ghcr.io/jinskeep-morpc/fastapi-from-frictionless-generator:latest AS generator
+# Installs fastapifromfrictionless[generate] from PyPI, copies schemas,
+# and runs the CLI to produce /generator/api/. Nothing from this stage
+# carries into the final image.
+FROM python:3.12-slim AS generator
+ARG PACKAGE_VERSION
+WORKDIR /generator
+RUN if [ -n "$PACKAGE_VERSION" ]; then \
+      pip install --no-cache-dir "fastapifromfrictionless[generate]==${PACKAGE_VERSION}"; \
+    else \
+      pip install --no-cache-dir "fastapifromfrictionless[generate]"; \
+    fi
 ARG SCHEMA_FOLDER=schemas
 COPY ${SCHEMA_FOLDER}/ /schemas/
 RUN mkdir -p /generator/api && \
@@ -12,10 +19,29 @@ RUN mkdir -p /generator/api && \
 
 # Stage 2 — lean runtime image
 #
-# Uses the pre-built runtime image (deps already installed).
-# frictionless and jinja2 are intentionally excluded — code generation
-# already happened in Stage 1.
-FROM ghcr.io/jinskeep-morpc/fastapi-from-frictionless-runtime:latest
+# Installs only the packages needed to serve the generated FastAPI app.
+# frictionless[generate] and jinja2 are excluded — code generation already
+# happened in Stage 1.
+FROM python:3.12-slim
+ARG PACKAGE_VERSION
+WORKDIR /app
+RUN if [ -n "$PACKAGE_VERSION" ]; then \
+      pip install --no-cache-dir \
+        "fastapifromfrictionless==${PACKAGE_VERSION}" \
+        "uvicorn[standard]" \
+        psycopg2-binary \
+        geoalchemy2 \
+        python-multipart \
+        "frictionless[excel]"; \
+    else \
+      pip install --no-cache-dir \
+        fastapifromfrictionless \
+        "uvicorn[standard]" \
+        psycopg2-binary \
+        geoalchemy2 \
+        python-multipart \
+        "frictionless[excel]"; \
+    fi
 COPY --from=generator /generator/api/ /app/api/
 
 EXPOSE 8000

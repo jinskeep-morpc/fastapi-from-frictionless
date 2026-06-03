@@ -170,43 +170,21 @@ The schema YAML files, Jinja2, and the Frictionless library do not exist in the 
 
 ---
 
-## Pre-built base images
+## Layer caching and build speed
 
-Building the generator and runtime base images (running `pip install`) takes 2–5 minutes. If every deployment rebuild had to `pip install` all packages from scratch, iterating on schema changes would be slow.
+The `Dockerfile` is ordered to maximise Docker's layer cache:
 
-The solution is to publish **pre-built base images** to the GitHub Container Registry (`ghcr.io`). These images have all the packages already installed. Your project's `Dockerfile` inherits from them, so a rebuild only needs to:
+1. `pip install` — slow (~2–3 min on a cold machine); runs first so it is cached
+2. `COPY schemas/` — fast; invalidates only the layers below it
+3. `python -m fastapifromfrictionless.cli generate` — fast
 
-1. Copy schema files into the generator stage (~seconds)
-2. Run the CLI to generate three `.py` files (~seconds)
-3. Copy those files into the runtime stage (~seconds)
+This means schema changes only retrigger the code-generation step and later layers — the slow pip install is skipped unless the Dockerfile itself changes. On a warm cache, a schema rebuild takes seconds.
 
-### Where the base images come from
+To pin a specific `fastapifromfrictionless` version instead of installing the latest:
 
+```bash
+docker compose build --build-arg PACKAGE_VERSION=0.2.16 api
 ```
-Developer merges code and creates a GitHub release
-                    │
-                    ▼
-          python-publish.yml
-          builds wheel → uploads to PyPI
-                    │
-                    ▼ (triggered automatically)
-          build-images.yml
-          polls PyPI until new version is visible
-                    │
-          ┌─────────┴──────────┐
-          ▼                    ▼
-  Dockerfile.generator-base   Dockerfile.runtime-base
-  FROM python:3.12-slim        FROM python:3.12-slim
-  pip install                  pip install
-    fastapifromfrictionless       fastapifromfrictionless
-    [generate]==${VERSION}        uvicorn psycopg2-binary …
-          │                    │
-          ▼                    ▼
-  ghcr.io/…/generator:latest  ghcr.io/…/runtime:latest
-  ghcr.io/…/generator:0.2.16  ghcr.io/…/runtime:0.2.16
-```
-
-Both `:latest` and version-pinned tags (e.g. `:0.2.16`) are published. Using `:latest` always gives you the most recent release. Pinning to a version (e.g. `FROM …/runtime:0.2.14`) freezes your deployment to a specific known-good state.
 
 ---
 
@@ -344,20 +322,21 @@ The database is not automatically migrated. If you add a column to a schema, you
 
 ### Package version update
 
-When a new version of `fastapifromfrictionless` is released and the base images on `ghcr.io` are updated:
+When a new version of `fastapifromfrictionless` is released:
 
 ```bash
-# Pull the new base images
-podman pull ghcr.io/jinskeep-morpc/fastapi-from-frictionless-generator:latest
-podman pull ghcr.io/jinskeep-morpc/fastapi-from-frictionless-runtime:latest
-
-# Rebuild your API image (uses the freshly pulled bases)
-podman-compose build --no-cache api
+# Rebuild the API image — pip installs the latest version from PyPI
+docker compose build --no-cache api   # or: podman-compose build --no-cache api
 
 # Restart
-podman-compose stop api
-podman rm <api_container_name>
-podman-compose up -d api
+docker compose up -d api
+```
+
+To pin a specific version instead of taking the latest:
+
+```bash
+docker compose build --build-arg PACKAGE_VERSION=0.2.17 api
+docker compose up -d api
 ```
 
 ### Stopping and cleaning up

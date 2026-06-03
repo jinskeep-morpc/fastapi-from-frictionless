@@ -131,7 +131,7 @@ A ready-to-use container deployment lives in `podman/`. It spins up three contai
 
 Multiple deployments can run simultaneously on the same machine by assigning each a unique `SUBNET_BASE` and port set (`API_PORT`, `PGADMIN_PORT`, `DB_PORT`).
 
-The API image uses a **two-stage build**: Stage 1 generates FastAPI code from your schemas; Stage 2 produces a lean runtime image. Both stages pull **pre-built base images** from ghcr.io, so only the copy and generation steps run locally — no pip installs required.
+The API image uses a **two-stage build**: Stage 1 installs the code-generator and produces FastAPI source from your schemas; Stage 2 installs only the runtime dependencies and serves the generated app. The `pip install` layer is cached, so schema-only rebuilds are fast.
 
 ```bash
 cd podman/
