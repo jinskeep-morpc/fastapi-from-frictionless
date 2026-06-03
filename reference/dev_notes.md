@@ -1,3 +1,7 @@
+## v0.2.18 — Fix NameError in generated app (2026-06-03)
+
+Remove `background_tasks: BackgroundTasks = None` from `import_excel` signature — `BackgroundTasks` was dropped from imports in v0.2.17 but left in the function signature, causing `NameError` at startup in all generated apps. Also removes dead imports `from sqlalchemy import text` and `from sqlalchemy.ext.asyncio import AsyncSession` from the generated `app.py`.
+
 ## v0.2.17 — Deployment simplification + Windows support (2026-06-03)
 
 - Removed `setup.sh`, `teardown.sh`, `nginx`, and pre-built GHCR base images from the Podman deployment
