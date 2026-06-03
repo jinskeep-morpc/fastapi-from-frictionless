@@ -16,84 +16,62 @@ Podman and Docker are largely compatible — they use the same image format and 
 
 ---
 
-## The four-container system
+## The three-container system
 
-The deployment runs four containers that work together:
+The deployment runs three containers that work together:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                  app_network  ({PODMAN_SUBNET}.0/16)                     │
+│                  app_network  ({SUBNET_BASE}.0/16)                       │
 │                                                                          │
 │   ┌──────────────────┐    SQL     ┌──────────────────────────────────┐   │
 │   │   postgres        │◄──────────│   api                            │   │
 │   │   {subnet}.5      │           │   {subnet}.7                     │   │
 │   │   PostGIS image   │           │   generated FastAPI app          │   │
-│   │   port 5432       │           │   port 8000 (internal only)      │   │
+│   │   port 5432       │           │   port 8000                      │   │
 │   └──────────────────┘           └──────────────────────────────────┘   │
-│            ▲                                          ▲                  │
-│            │  SQL                                     │  proxy           │
-│   ┌──────────────────┐           ┌──────────────────────────────────┐   │
-│   │   pgadmin         │           │   nginx                          │   │
-│   │   {subnet}.6      │◄──────────│   {subnet}.8                     │   │
-│   │   pgAdmin 4 image │  proxy    │   reverse proxy                  │   │
-│   │   port 80         │           │   port 80                        │   │
-│   │   (internal only) │           └──────────────────────────────────┘   │
+│            ▲                                                             │
+│            │  SQL                                                        │
+│   ┌──────────────────┐                                                   │
+│   │   pgadmin         │                                                  │
+│   │   {subnet}.6      │                                                  │
+│   │   pgAdmin 4 image │                                                  │
+│   │   port 80         │                                                  │
 │   └──────────────────┘                                                   │
 └──────────────────────────────────────────────────────────────────────────┘
-                                           │
-                                    {NGINX_IP}:80
-                               {PROJECT_NAME}.api
-                               {PROJECT_NAME}.pgadmin
+          │                    │                    │
+    localhost:DB_PORT   localhost:PGADMIN_PORT  localhost:API_PORT
 ```
 
-`{subnet}` is set by `PODMAN_SUBNET` in `.env` (e.g. `10.93.0`). The internal IPs are only relevant for container-to-container communication and do not need to be unique across deployments — each compose stack gets its own isolated bridge network.
+`{subnet}` is set by `SUBNET_BASE` in `.env` (e.g. `10.91`). The internal IPs are only relevant for container-to-container communication and do not need to be unique across deployments — each compose stack gets its own isolated bridge network.
 
 | Container | Image | Purpose |
 |-----------|-------|---------|
 | `postgres` | `docker.io/postgis/postgis` | The database. PostGIS extends standard PostgreSQL with support for geographic data types (points, polygons, etc.) |
 | `pgadmin` | `docker.io/dpage/pgadmin4` | A web-based graphical interface for browsing and editing the database directly |
 | `api` | Built locally from `Dockerfile` | The generated FastAPI application |
-| `nginx` | `docker.io/nginx:alpine` | Reverse proxy — routes `{project}.api` to the API and `{project}.pgadmin` to pgAdmin |
 
 ### Why a private network?
 
-All four containers are placed on a private bridge network (`app_network`). This means:
+All three containers are placed on a private bridge network (`app_network`). This means:
 
 - Containers talk to each other using their **service names** as hostnames (e.g. `postgres`). The `DATABASE_URL` in the API container uses `@postgres:5432` because the internal DNS resolves `postgres` to the postgres container's IP.
 - Traffic between containers **never leaves the host machine** — it stays on the virtual network.
-- Only nginx (port 80) is exposed to the host, bound to `NGINX_IP` rather than `0.0.0.0`.
-
-### How hostname routing works
-
-The nginx container receives `PROJECT_NAME` as an environment variable at startup. A small shell one-liner runs `envsubst` to fill `$PROJECT_NAME` into `nginx.conf.template` before nginx starts:
-
-```
-nginx.conf.template  +  PROJECT_NAME=my-project
-            │
-            │  envsubst '$PROJECT_NAME'
-            ▼
-        nginx.conf
-          server_name my-project.api      → proxy_pass http://api:8000
-          server_name my-project.pgadmin  → proxy_pass http://pgadmin:80
-```
-
-The `setup.sh` script adds the matching entries to `/etc/hosts`:
-
-```
-127.0.1.1   my-project.api
-127.0.1.1   my-project.pgadmin
-```
+- Each service also has a direct host port binding (`API_PORT`, `PGADMIN_PORT`, `DB_PORT`) so the user can reach it at `localhost:PORT`.
 
 ### Running multiple stacks without port conflicts
 
-Each deployment is assigned a unique loopback IP via `NGINX_IP`. Linux treats the entire `127.0.0.0/8` range as loopback, so `127.0.1.1`, `127.0.1.2`, and so on all work without any extra network configuration.
+Each deployment must use a different `SUBNET_BASE` (for the internal network) and a different set of host ports. Port conflicts between stacks are prevented by choosing non-overlapping port numbers:
 
-```
-127.0.1.1:80  →  stack A nginx  →  project-a.api / project-a.pgadmin
-127.0.1.2:80  →  stack B nginx  →  project-b.api / project-b.pgadmin
-```
+| | Stack A | Stack B |
+|---|---------|---------|
+| `SUBNET_BASE` | `10.91` | `10.92` |
+| `API_PORT` | `8000` | `8100` |
+| `PGADMIN_PORT` | `5050` | `5150` |
+| `DB_PORT` | `5432` | `5532` |
+| API URL | `http://localhost:8000` | `http://localhost:8100` |
 
-Postgres for each stack is similarly bound to its `NGINX_IP`, so `127.0.1.1:5432` and `127.0.1.2:5432` never conflict either.
+This approach works identically on Linux, macOS, and Windows — no loopback IP tricks or `/etc/hosts` edits required.
 
 ---
 
@@ -112,7 +90,6 @@ podman-compose up
        ▼  (only after postgres reports healthy)
   Start pgadmin
   Start api
-  Start nginx
 ```
 
 The health check runs `pg_isready` inside the postgres container, which is the standard tool for checking whether PostgreSQL is accepting connections.
@@ -133,7 +110,7 @@ The `compose.yaml` uses **bind mounts** to solve this: a folder on your host mac
 | `./pgadmin/` | `/var/lib/pgadmin` | pgAdmin saved connections and preferences |
 | `./${SCHEMA_FOLDER}/` | `/schemas/` | The `*.schema.yaml` files |
 
-The `:Z` suffix on each volume (`./postgres:/var/lib/postgresql/data:Z`) is a Podman/SELinux label that tells the operating system to grant the container permission to read and write that folder. It is required on systems with SELinux enabled (such as Fedora or RHEL).
+No special volume flags are used — the bind mounts work as-is on Linux, macOS, and Windows. On SELinux-enabled systems (Fedora, RHEL), you may need to add `:Z` to each volume mount if Podman reports a permission error on the host directory.
 
 ---
 
@@ -251,9 +228,11 @@ os.getenv("API_KEY") inside the running Python process
 
 | Variable | Used by | Purpose |
 |----------|---------|---------|
-| `PROJECT_NAME` | nginx, setup.sh | Hostname prefix — produces `{PROJECT_NAME}.api` and `{PROJECT_NAME}.pgadmin` |
-| `NGINX_IP` | compose.yaml, setup.sh | Loopback IP this deployment binds to (e.g. `127.0.1.1`); must be unique per simultaneously running stack |
-| `PODMAN_SUBNET` | compose.yaml | First three octets of the internal container network (e.g. `10.93.0`); used for static container IPs |
+| `SUBNET_BASE` | compose.yaml | First two octets of the internal container network (e.g. `10.91`); must be unique per simultaneously running stack |
+| `API_PORT` | compose.yaml | Host port for the FastAPI service; must be unique per simultaneously running stack |
+| `PGADMIN_PORT` | compose.yaml | Host port for pgAdmin; must be unique per simultaneously running stack |
+| `DB_PORT` | compose.yaml | Host port for PostgreSQL; must be unique per simultaneously running stack |
+| `PROJECT_NAME` | compose.yaml | Informational label; no longer drives hostnames |
 | `POSTGRES_USER` | postgres, api | Database login name |
 | `POSTGRES_PASSWORD` | postgres, api | Database password |
 | `POSTGRES_DB` | postgres, api | Name of the database to create |
@@ -262,7 +241,7 @@ os.getenv("API_KEY") inside the running Python process
 | `SCHEMA_FOLDER` | Dockerfile build, api | Host path to schema files; also determines what gets copied at build time |
 | `API_KEY` | api | If set, all requests must include `X-API-Key: <value>` |
 | `ALLOWED_ORIGINS` | api | CORS policy — which websites may call the API |
-| `API_URL` | api | The public URL of the API (set to `http://{PROJECT_NAME}.api`); used when the import endpoint calls back to itself |
+| `API_URL` | api | The public base URL of the API (e.g. `http://localhost:8000`); must match `API_PORT`; used by the Excel export/import endpoints |
 
 ---
 
@@ -320,11 +299,11 @@ These headers are a standard baseline. They have no effect on the API's function
 
 ### 5. Network isolation
 
-The private bridge network means postgres and pgadmin are not directly reachable from outside the host — only from other containers on the same network or through nginx.
+The private bridge network means containers communicate with each other using service names (`postgres`, `api`, `pgadmin`) without leaving the host. Each service also has a host-facing port binding on `localhost`.
 
-nginx and postgres are bound to `NGINX_IP` (a loopback address), not `0.0.0.0`, so they are only reachable on the local machine. For a server exposed to a wider network, also consider:
-- Removing postgres host port exposure entirely (pgAdmin inside the network can still reach it)
-- Adding TLS termination at the nginx layer
+For a server exposed to a wider network, also consider:
+- Removing the `DB_PORT` host binding for postgres (pgAdmin inside the network can still reach it via the service name)
+- Adding a TLS-terminating reverse proxy (e.g. Caddy or nginx) in front of `API_PORT`
 - Restricting pgAdmin behind a VPN
 
 ### 6. Rootless Podman
@@ -334,8 +313,6 @@ Unlike Docker, Podman runs containers as your regular user by default. This mean
 - A compromised container process runs with the same limited permissions as your user account
 - No root daemon is listening on a socket that could be exploited
 - File ownership: files written by the container (into the `./postgres/` and `./pgadmin/` volumes) are owned by your user, not root
-
-The `:Z` volume label works with this model — it relabels the host directory so the container's user-namespace UID can read and write it.
 
 ### 7. Changing default credentials
 
@@ -357,10 +334,10 @@ Schema changes require a rebuild because code generation happens at build time:
 ```bash
 # 1. Edit your *.schema.yaml file
 # 2. Rebuild the API image
-podman-compose build api
+docker compose build api   # or: podman-compose build api
 
 # 3. Restart the API container
-podman-compose up -d api
+docker compose up -d api   # or: podman-compose up -d api
 ```
 
 The database is not automatically migrated. If you add a column to a schema, you may also need to alter the database table manually, or drop and recreate it (losing data).
@@ -385,14 +362,12 @@ podman-compose up -d api
 
 ### Stopping and cleaning up
 
-Always use `teardown.sh` rather than calling `podman-compose down` directly. It removes the network bridge from the rootless namespace (see [Rootless Podman networking gotchas](#rootless-podman-networking-gotchas)) as well as the `/etc/hosts` entries:
-
 ```bash
-# Stop containers and clean up hosts entries and bridge
-./teardown.sh
+# Stop containers
+docker compose down   # or: podman-compose down
 
 # Also delete persisted data (destructive — cannot be undone)
-./teardown.sh
+docker compose down
 rm -rf ./postgres/ ./pgadmin/
 ```
 
@@ -410,48 +385,28 @@ Rootless Podman's networking has two layers:
 
 **The problem:** `podman-compose down` removes containers and the Podman network record, but **does not remove the bridge interface** from the user network namespace. If a first run fails partway through — for example, because a port is already in use — the bridge is left behind. On the next `podman-compose up`, Podman assigns the same bridge name to the new network but finds the interface already exists and skips recreating it. The bridge retains the old gateway IP, aardvark-dns cannot bind to the new one, and all hostname resolution silently fails. Containers can still ping each other by IP, but service name lookups time out.
 
-**The fix:** `setup.sh` reads the assigned bridge name from the network config and deletes any existing interface before starting:
+**The fix:** run `podman-compose down`, then manually delete the stale bridge before restarting:
 
 ```bash
-bridge=$(podman network inspect "${NETWORK_NAME}" | python3 -c "...")
-podman unshare --rootless-netns -- ip link delete "$bridge"
+podman-compose down
+podman unshare --rootless-netns -- ip link delete podmanN
+podman-compose up -d
 ```
 
-`teardown.sh` does the same cleanup on the way down so subsequent runs always start with a clean slate.
-
-**How to diagnose it manually:** if containers start but the API can't connect to postgres, run:
+**How to diagnose:** if containers start but the API can't connect to postgres, run:
 
 ```bash
 podman unshare --rootless-netns ip -brief addr
 ```
 
-If the bridge for your network has the wrong IP (e.g. shows `10.91.0.1` when `PODMAN_SUBNET` is `10.93.0`), that is the ghost bridge. Delete it with:
+If the bridge for your network has the wrong IP (e.g. shows `10.91.0.1` when `SUBNET_BASE` is `10.92`), that is the ghost bridge. Delete it with:
 
 ```bash
 podman unshare --rootless-netns -- ip link delete podmanN
 ```
 
-Then run `./teardown.sh && ./setup.sh` for a clean start.
+Then run `podman-compose down && podman-compose up -d` for a clean start.
 
-### Port 80 requires a one-time sysctl change
+### Port conflicts between stacks
 
-Linux reserves ports below 1024 for privileged processes. Rootless Podman (which runs as a normal user) cannot bind to port 80 by default. The symptom is:
-
-```
-Error: rootlessport cannot expose privileged port 80 ... listen tcp ...:80: bind: permission denied
-```
-
-Fix with a one-time change to `/etc/sysctl.conf`:
-
-```bash
-echo "net.ipv4.ip_unprivileged_port_start=80" | sudo tee -a /etc/sysctl.conf
-sudo sysctl -p
-```
-
-This allows any process running as your user to bind to port 80 or above. It persists across reboots.
-
-### Postgres port conflicts with legacy stacks
-
-The per-loopback-IP design (`NGINX_IP=127.0.1.1`, `127.0.1.2`, etc.) prevents port conflicts between deployments that both use this scheme, because each stack's services are bound to a different IP address on the same port.
-
-However, a legacy deployment that binds postgres to `0.0.0.0:5432` occupies that port on **all** interfaces — including `127.0.1.1`, `127.0.1.2`, and every other loopback address. No new deployment can expose postgres to the host until the legacy stack is updated or its postgres port mapping is removed.
+Since each stack binds services directly to host ports, two stacks using the same `API_PORT`, `PGADMIN_PORT`, or `DB_PORT` will conflict. The second stack to start will fail with a "port already in use" error. Fix by assigning each stack a non-overlapping port set in its `.env`.
