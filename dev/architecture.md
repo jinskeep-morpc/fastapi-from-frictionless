@@ -373,7 +373,6 @@ The `.github/workflows/` folder contains four automation files that run on GitHu
 |----------|---------|--------------|
 | `ci.yml` | Every push / PR | Runs `ruff` (linting), `mypy` (type checking), `pytest` (tests) |
 | `python-publish.yml` | A GitHub release is published | Builds the wheel and uploads it to PyPI |
-| `build-images.yml` | After PyPI publish succeeds | Pulls the new version from PyPI, builds Docker/Podman base images, pushes to `ghcr.io` |
 | `todo_to_issue.yml` | Push to `main` | Scans code for `# TODO` comments and opens GitHub issues automatically |
 
 **The release pipeline in sequence:**
@@ -384,13 +383,6 @@ Developer creates a GitHub release
               ▼
      python-publish.yml
      builds wheel → uploads to PyPI
-              │
-              ▼ (triggered automatically)
-     build-images.yml
-     waits for PyPI CDN to serve the new version
-     builds generator base image (pip install fastapifromfrictionless[generate])
-     builds runtime base image   (pip install fastapifromfrictionless)
-     pushes both to ghcr.io with :latest and :<version> tags
 ```
 
 ---

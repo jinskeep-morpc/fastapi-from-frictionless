@@ -79,7 +79,7 @@ docker compose up -d
 podman-compose up -d
 ```
 
-On the first run, images are pulled from ghcr.io (~1–2 min on a fast connection). Subsequent builds are fast.
+On the first run, Docker installs all Python dependencies from PyPI (~2–3 min). Subsequent builds are fast — the pip install layer is cached and only reruns if the Dockerfile changes.
 
 ### 5. Verify
 
@@ -150,23 +150,12 @@ PostgreSQL is exposed on `localhost:${DB_PORT}`. Connect from the host:
 psql -h localhost -p ${DB_PORT} -U postgres -d mydb
 ```
 
-## Pre-built base images
+## Pinning a package version
 
-The `Dockerfile` references two images published to the GitHub Container Registry:
+By default the `Dockerfile` installs the latest `fastapifromfrictionless` release from PyPI. To pin a specific version pass the `PACKAGE_VERSION` build arg:
 
-| Image | Tag | Purpose |
-|-------|-----|---------|
-| `ghcr.io/jinskeep-morpc/fastapi-from-frictionless-generator` | `latest` | Stage 1 base — `python:3.12-slim` + `fastapifromfrictionless[generate]` |
-| `ghcr.io/jinskeep-morpc/fastapi-from-frictionless-runtime` | `latest` | Stage 2 base — `python:3.12-slim` + `fastapifromfrictionless` + `uvicorn` + `psycopg2-binary` |
-
-These images are rebuilt automatically on each GitHub release via `.github/workflows/build-images.yml`. Both `latest` and version-pinned tags (e.g. `0.2.16`) are published.
-
-To pin to a specific version, edit the `FROM` lines in `Dockerfile`:
-
-```dockerfile
-FROM ghcr.io/jinskeep-morpc/fastapi-from-frictionless-generator:0.2.16 AS generator
-...
-FROM ghcr.io/jinskeep-morpc/fastapi-from-frictionless-runtime:0.2.16
+```bash
+docker compose build --build-arg PACKAGE_VERSION=0.2.16 api
 ```
 
 ## Network layout
