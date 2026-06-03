@@ -41,6 +41,9 @@ if %errorlevel% neq 0 (
 )
 echo Deployment files copied to C:\deploy\
 
+:: .env.test is tracked in git; rename to .env for compose
+copy /Y "C:\deploy\.env.test" "C:\deploy\.env"
+
 :: ── Run docker compose ───────────────────────────────────────
 echo.
 echo [3/4] Running docker compose up -d...
