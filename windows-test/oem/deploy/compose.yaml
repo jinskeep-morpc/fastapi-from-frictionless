@@ -48,6 +48,7 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
       - API_KEY=${API_KEY}
+      - ALLOW_NO_AUTH=${ALLOW_NO_AUTH:-false}
       - SCHEMA_FOLDER=/schemas
       - API_URL=${API_URL}
     volumes:
