@@ -42,10 +42,10 @@ echo.
 echo [2/5] Upgrading pip...
 "%PYTHON%" -m pip install --upgrade pip
 
-:: ── 3. Install fastapifromfrictionless ───────────────────────
+:: ── 3. Install fastapifromfrictionless + uvicorn ─────────────
 echo.
-echo [3/5] Installing fastapifromfrictionless[generate]...
-"%PIP%" install "fastapifromfrictionless[generate]"
+echo [3/5] Installing fastapifromfrictionless[generate] and uvicorn...
+"%PIP%" install "fastapifromfrictionless[generate]" "uvicorn[standard]"
 if %errorlevel% neq 0 (
     echo ERROR: pip install failed.
     pause
@@ -56,31 +56,35 @@ if %errorlevel% neq 0 (
 echo.
 echo [4/5] Running code generator...
 set "SCHEMAS=%~dp0schemas"
-set "OUTPUT=C:\test\output"
-mkdir "%OUTPUT%" 2>nul
-"%PYTHON%" -m fastapifromfrictionless.cli generate "%SCHEMAS%" --output "%OUTPUT%"
+:: Generate into C:\test\api\ to match the uvicorn api.app:app module path
+set "APP_DIR=C:\test\api"
+mkdir "%APP_DIR%" 2>nul
+"%PYTHON%" -m fastapifromfrictionless.cli generate "%SCHEMAS%" --output "%APP_DIR%"
 if %errorlevel% neq 0 (
     echo ERROR: Code generation failed.
     pause
     exit /b 1
 )
 
+:: Create __init__.py so Python treats the folder as a package
+type nul > "%APP_DIR%\__init__.py"
+
 echo.
 echo Generated files:
-dir /b "%OUTPUT%"
+dir /b "%APP_DIR%"
 
-:: ── 5. Install runtime deps and start the app ────────────────
+:: ── 5. Start the generated app ───────────────────────────────
 echo.
-echo [5/5] Installing runtime deps and starting uvicorn...
-"%PIP%" install fastapi uvicorn sqlmodel
-cd /d "%OUTPUT%"
-start "FastAPI test server" "%PYTHON%" -m uvicorn api.app:app --port 8000
+echo [5/5] Starting uvicorn...
+:: Run from C:\test\ so "api.app:app" resolves to C:\test\api\app.py
+cd /d C:\test
+start "FastAPI test server" "%PYTHON%" -m uvicorn api.app:app --host 0.0.0.0 --port 8000
 
 echo.
 echo ============================================================
 echo  SUCCESS
 echo  API running at http://localhost:8000
 echo  Swagger UI at  http://localhost:8000/docs
-echo  Generated files in: %OUTPUT%
+echo  Generated files in: %APP_DIR%
 echo ============================================================
 pause
