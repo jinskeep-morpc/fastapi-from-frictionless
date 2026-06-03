@@ -56,7 +56,7 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
 )
-docker compose up -d
+docker compose up -d --force-recreate
 if %errorlevel% neq 0 (
     echo ERROR: docker compose up failed.
     echo Check logs with: docker compose logs
