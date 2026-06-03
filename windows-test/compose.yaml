@@ -17,6 +17,7 @@ services:
       - "${RDP_PORT:-3389}:3389"
     volumes:
       - ./oem:/oem
+      - ./oem:/data
       - windows-data:/storage
     stop_grace_period: 2m
 
