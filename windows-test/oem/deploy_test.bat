@@ -6,6 +6,12 @@ echo  Phase 2: Docker Deployment Test
 echo  Tests the full docker compose deployment on Windows
 echo ============================================================
 
+:: ── Start Docker Desktop ─────────────────────────────────────
+echo.
+echo [0/4] Starting Docker Desktop...
+start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+timeout /t 10 /nobreak >nul
+
 :: ── Wait for Docker Engine to be ready ───────────────────────
 echo.
 echo [1/4] Waiting for Docker Engine...
