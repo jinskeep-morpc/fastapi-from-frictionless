@@ -44,11 +44,18 @@ echo Deployment files copied to C:\deploy\
 :: .env.test is tracked in git; rename to .env for compose
 copy /Y "C:\deploy\.env.test" "C:\deploy\.env"
 
-:: ── Run docker compose ───────────────────────────────────────
+:: ── Build and run docker compose ─────────────────────────────
 echo.
-echo [3/4] Running docker compose up -d...
-echo (First run pulls images and builds the API — this may take 5-10 minutes)
+echo [3/4] Building API image (no cache) and starting services...
+echo (Pulls latest fastapifromfrictionless from PyPI — takes 5-10 minutes)
 cd /d C:\deploy
+docker compose build --no-cache api
+if %errorlevel% neq 0 (
+    echo ERROR: docker compose build failed.
+    echo Check logs with: docker compose logs
+    pause
+    exit /b 1
+)
 docker compose up -d
 if %errorlevel% neq 0 (
     echo ERROR: docker compose up failed.
