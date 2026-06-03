@@ -1,3 +1,7 @@
+## #127 — Remove pre-built base images, self-contained Dockerfile (2026-06-03)
+
+Deleted `Dockerfile.generator-base`, `Dockerfile.runtime-base`, and `.github/workflows/build-images.yml`. Rewrote `podman/Dockerfile` as a self-contained two-stage build starting from `python:3.12-slim` — no more `FROM ghcr.io/...` references. Stage 1 installs `fastapifromfrictionless[generate]` and runs the code-gen CLI; Stage 2 installs runtime deps only. Optional `PACKAGE_VERSION` build arg pins a PyPI release; defaults to latest. pip install precedes COPY schemas/ for optimal layer caching. Updated `podman/README.md`, `dev/podman-deployment.md`, `dev/architecture.md`, and root `README.md`.
+
 ## #125 — Simplify deployment: port-based access, Windows support (2026-06-03)
 
 Removed `setup.sh`, `teardown.sh`, `nginx.conf.template`, and `entrypoint.sh`. Replaced NGINX_IP loopback routing and nginx reverse proxy with direct host port bindings (`API_PORT`, `PGADMIN_PORT`, `DB_PORT`) that work on Linux, macOS, and Windows. Removed `:Z` SELinux volume flags from `compose.yaml` (errors on Docker Desktop). Bumped `requires-python` to `>=3.11` to align with `contextlib.chdir` usage. Fixed the Excel export endpoint to read the temp file into memory before `os.unlink` — avoids Windows `PermissionError` when `FileResponse` holds an open handle. Updated `podman/README.md`, `dev/podman-deployment.md`, and root `README.md`.
