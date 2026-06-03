@@ -1,3 +1,7 @@
+## #125 — Simplify deployment: port-based access, Windows support (2026-06-03)
+
+Removed `setup.sh`, `teardown.sh`, `nginx.conf.template`, and `entrypoint.sh`. Replaced NGINX_IP loopback routing and nginx reverse proxy with direct host port bindings (`API_PORT`, `PGADMIN_PORT`, `DB_PORT`) that work on Linux, macOS, and Windows. Removed `:Z` SELinux volume flags from `compose.yaml` (errors on Docker Desktop). Bumped `requires-python` to `>=3.11` to align with `contextlib.chdir` usage. Fixed the Excel export endpoint to read the temp file into memory before `os.unlink` — avoids Windows `PermissionError` when `FileResponse` holds an open handle. Updated `podman/README.md`, `dev/podman-deployment.md`, and root `README.md`.
+
 ## #114 — Split load.py into runtime/ and scaffolding.py
 
 Broke the god module `load.py` (360 lines, six unrelated responsibilities) into focused modules:

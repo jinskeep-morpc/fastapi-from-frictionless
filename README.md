@@ -127,19 +127,19 @@ See [`doc/quickstart.ipynb`](doc/quickstart.ipynb) for a step-by-step walkthroug
 
 ## Deployment
 
-A ready-to-use Podman deployment lives in `podman/`. It spins up four containers — PostGIS database, pgAdmin web UI, the generated FastAPI app, and an nginx reverse proxy — so multiple deployments can run simultaneously on the same machine without port conflicts.
+A ready-to-use container deployment lives in `podman/`. It spins up three containers — PostGIS database, pgAdmin web UI, and the generated FastAPI app — and works with Docker Desktop, Podman, or any `docker compose`-compatible tool on Linux, macOS, and Windows.
 
-Each deployment gets a unique loopback IP (`NGINX_IP`) and a project name (`PROJECT_NAME`). Services are then available at `http://{PROJECT_NAME}.api` and `http://{PROJECT_NAME}.pgadmin` with no port numbers in the URL.
+Multiple deployments can run simultaneously on the same machine by assigning each a unique `SUBNET_BASE` and port set (`API_PORT`, `PGADMIN_PORT`, `DB_PORT`).
 
 The API image uses a **two-stage build**: Stage 1 generates FastAPI code from your schemas; Stage 2 produces a lean runtime image. Both stages pull **pre-built base images** from ghcr.io, so only the copy and generation steps run locally — no pip installs required.
 
 ```bash
 cd podman/
-cp .env.example .env          # set PROJECT_NAME, NGINX_IP, passwords, and settings
+cp .env.example .env          # set ports, passwords, and settings
 # add *.schema.yaml files to schemas/
-./setup.sh                    # adds /etc/hosts entries, builds, and starts all containers
+docker compose up -d          # or: podman-compose up -d
 ```
 
-After schema changes, re-run `podman-compose build api` then `podman-compose up -d api`. To stop and clean up, run `./teardown.sh`.
+After schema changes, re-run `docker compose build api` then `docker compose up -d api`. To stop and clean up, run `docker compose down`.
 
 See [`podman/README.md`](podman/README.md) for full instructions.

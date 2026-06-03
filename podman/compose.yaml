@@ -1,14 +1,14 @@
 # compose.yaml
 #
-# Four services: PostGIS database, pgAdmin web UI, the generated FastAPI application,
-# and an nginx reverse proxy.
+# Three services: PostGIS database, pgAdmin web UI, the generated FastAPI application.
 #
-# Access via hostname (set up by setup.sh):
-#   http://{PROJECT_NAME}.api       → FastAPI
-#   http://{PROJECT_NAME}.pgadmin   → pgAdmin
+# Access via port (configure in .env):
+#   http://localhost:${API_PORT}      → FastAPI
+#   http://localhost:${PGADMIN_PORT}  → pgAdmin
+#   localhost:${DB_PORT}              → PostgreSQL (direct)
 #
-# Copy this file, Dockerfile, entrypoint.sh, nginx.conf.template, and .env.example
-# to your deployment folder, then run ./setup.sh to get started.
+# Copy this file, Dockerfile, and .env.example to your deployment folder,
+# then run: docker compose up -d   (or: podman-compose up -d)
 
 services:
   postgres:
@@ -18,9 +18,9 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - ./postgres:/var/lib/postgresql/data:Z
+      - ./postgres:/var/lib/postgresql/data
     ports:
-      - ${NGINX_IP:-127.0.1.1}:5432:5432
+      - ${DB_PORT:-5432}:5432
     networks:
       app_network:
         ipv4_address: ${SUBNET_BASE:-10.91}.0.5
@@ -38,7 +38,9 @@ services:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
       - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
     volumes:
-      - ./pgadmin:/var/lib/pgadmin:Z
+      - ./pgadmin:/var/lib/pgadmin
+    ports:
+      - ${PGADMIN_PORT:-5050}:80
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,7 +63,9 @@ services:
       - SCHEMA_FOLDER=/schemas
       - API_URL=${API_URL}
     volumes:
-      - ./${SCHEMA_FOLDER:-schemas}:/schemas:Z
+      - ./${SCHEMA_FOLDER:-schemas}:/schemas
+    ports:
+      - ${API_PORT:-8000}:8000
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,27 +74,6 @@ services:
         ipv4_address: ${SUBNET_BASE:-10.91}.0.7
         aliases:
           - api
-
-  nginx:
-    image: docker.io/nginx:alpine
-    volumes:
-      - ./nginx.conf.template:/nginx.conf.template:ro,Z
-    environment:
-      - PROJECT_NAME=${PROJECT_NAME}
-    command: >
-      /bin/sh -c
-      "envsubst '$$PROJECT_NAME' < /nginx.conf.template > /etc/nginx/nginx.conf
-      && nginx -g 'daemon off;'"
-    ports:
-      - ${NGINX_IP:-127.0.1.1}:80:80
-    depends_on:
-      - api
-      - pgadmin
-    networks:
-      app_network:
-        ipv4_address: ${SUBNET_BASE:-10.91}.0.8
-        aliases:
-          - nginx
 
 networks:
   app_network:
