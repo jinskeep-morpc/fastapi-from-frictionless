@@ -1,3 +1,12 @@
+## v0.2.17 — Deployment simplification + Windows support (2026-06-03)
+
+- Removed `setup.sh`, `teardown.sh`, `nginx`, and pre-built GHCR base images from the Podman deployment
+- Replaced loopback-IP hostname routing with port-based access (`API_PORT`, `PGADMIN_PORT`, `DB_PORT`)
+- Self-contained `Dockerfile` (two stages from `python:3.12-slim`; no external base image dependency)
+- Removed `:Z` SELinux volume flags for Docker Desktop / Windows compatibility
+- Fixed export endpoint temp-file pattern to avoid Windows `PermissionError` on `os.unlink`
+- Bumped `requires-python` to `>=3.11` to align with `contextlib.chdir` usage
+
 ## #127 — Remove pre-built base images, self-contained Dockerfile (2026-06-03)
 
 Deleted `Dockerfile.generator-base`, `Dockerfile.runtime-base`, and `.github/workflows/build-images.yml`. Rewrote `podman/Dockerfile` as a self-contained two-stage build starting from `python:3.12-slim` — no more `FROM ghcr.io/...` references. Stage 1 installs `fastapifromfrictionless[generate]` and runs the code-gen CLI; Stage 2 installs runtime deps only. Optional `PACKAGE_VERSION` build arg pins a PyPI release; defaults to latest. pip install precedes COPY schemas/ for optimal layer caching. Updated `podman/README.md`, `dev/podman-deployment.md`, `dev/architecture.md`, and root `README.md`.
