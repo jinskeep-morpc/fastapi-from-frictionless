@@ -1,6 +1,6 @@
 services:
   windows:
-    image: dockur/windows
+    image: ghcr.io/dockur/windows
     environment:
       VERSION: "${WINDOWS_VERSION:-11}"
       RAM_SIZE: "${RAM_SIZE:-4G}"
