@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: docker.io/postgis/postgis
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    ports:
+      - ${DB_PORT:-5432}:5432
+    networks:
+      app_network:
+        ipv4_address: ${SUBNET_BASE:-10.91}.0.5
+        aliases:
+          - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: docker.io/dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+    volumes:
+      - ./pgadmin:/var/lib/pgadmin
+    ports:
+      - ${PGADMIN_PORT:-5050}:80
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      app_network:
+        ipv4_address: ${SUBNET_BASE:-10.91}.0.6
+        aliases:
+          - pgadmin
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SCHEMA_FOLDER=${SCHEMA_FOLDER:-schemas}
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - API_KEY=${API_KEY}
+      - SCHEMA_FOLDER=/schemas
+      - API_URL=${API_URL}
+    volumes:
+      - ./${SCHEMA_FOLDER:-schemas}:/schemas
+    ports:
+      - ${API_PORT:-8000}:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      app_network:
+        ipv4_address: ${SUBNET_BASE:-10.91}.0.7
+        aliases:
+          - api
+
+networks:
+  app_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${SUBNET_BASE:-10.91}.0.0/16
+          ip_range: ${SUBNET_BASE:-10.91}.0.0/24
+          gateway: ${SUBNET_BASE:-10.91}.0.1

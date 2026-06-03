@@ -3,11 +3,12 @@ services:
     image: ghcr.io/dockur/windows
     environment:
       VERSION: "${WINDOWS_VERSION:-11}"
-      RAM_SIZE: "${RAM_SIZE:-4G}"
+      RAM_SIZE: "${RAM_SIZE:-8G}"
       CPU_CORES: "${CPU_CORES:-2}"
       DISK_SIZE: "${DISK_SIZE:-64G}"
       USERNAME: "${WIN_USERNAME:-User}"
       PASSWORD: "${WIN_PASSWORD:-test}"
+      HYPERV: "Y"
     devices:
       - /dev/kvm
     cap_add:
