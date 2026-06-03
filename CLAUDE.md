@@ -75,6 +75,22 @@ For each schema, `app.py` generates:
 - `DELETE /{name}/{pk}` — delete
 - `GET /{name}/query` (only when schema has foreign keys) — `fastapi_querybuilder` dynamic query endpoint
 
+## Container deployment (`podman/`)
+
+A ready-to-use deployment lives in `podman/`. Three files are needed: `Dockerfile`, `compose.yaml`, `.env.example`.
+
+```bash
+cd podman/
+cp .env.example .env   # set API_PORT, PGADMIN_PORT, DB_PORT, passwords
+# add *.schema.yaml files to schemas/
+docker compose up -d   # or: podman-compose up -d
+```
+
+- **`Dockerfile`** — self-contained two-stage build. Stage 1 installs `fastapifromfrictionless[generate]` and runs the CLI; Stage 2 installs runtime deps only. No external base images.
+- **`compose.yaml`** — three services: `postgres` (PostGIS), `pgadmin`, `api`. Port isolation via `API_PORT`, `PGADMIN_PORT`, `DB_PORT` (set in `.env`). `SUBNET_BASE` isolates internal networks per concurrent stack.
+- After schema changes: `docker compose build api && docker compose up -d api`
+- Pin a package version: `docker compose build --build-arg PACKAGE_VERSION=0.2.16 api`
+
 ## `doc/` directory
 
 Contains a worked example (sensor tracking) with real schemas, a generated app, and Jupyter devlogs. The `doc/data/` schemas are the canonical usage reference. Generated files (`doc/app.py`, `doc/models.py`, `doc/database.py`) show expected output.
@@ -90,8 +106,8 @@ For each item in the roadmap:
 3. **Make changes in logical commits** — implement the work; commit in small, focused units with clear messages.
 4. **Write tests** — add or update tests covering the changes.
 5. **Prepend notes to `reference/dev_notes.md`** — prepend a brief summary of what was done and why. Do **not** read the file first; always prepend only.
-6. **Update README.md**  — update the readme to update the completed roadmap item and any changes to other sections. 
-6. **Create the PR** — open a pull request against the main branch with a clear title and summary.
+6. **Update README.md** — update the readme to reflect any changes to behaviour or sections.
+7. **Create the PR** — open a pull request against the main branch with a clear title and summary.
 
 ### Additional rules
 
