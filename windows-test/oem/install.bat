@@ -5,20 +5,37 @@ echo ============================================================
 echo  fastapi-from-frictionless Windows test
 echo ============================================================
 
-:: ── 1. Install Python 3.12 via winget ────────────────────────
+:: ── 1. Download and install Python 3.12 ─────────────────────
 echo.
-echo [1/5] Installing Python 3.12...
-winget install -e --id Python.Python.3.12 ^
-    --silent --accept-source-agreements --accept-package-agreements
+echo [1/5] Downloading Python 3.12...
+powershell -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe' -OutFile 'C:\python-installer.exe'"
 if %errorlevel% neq 0 (
-    echo ERROR: Python install failed. Check winget is available.
+    echo ERROR: Failed to download Python installer. Check network connectivity.
     pause
     exit /b 1
 )
 
-:: Reload PATH so python.exe is visible in this session
+echo Installing Python 3.12 (silent)...
+C:\python-installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
+if %errorlevel% neq 0 (
+    echo ERROR: Python installation failed.
+    pause
+    exit /b 1
+)
+
+:: Allow installer to finalise before referencing the new paths
+timeout /t 10 /nobreak >nul
+
 set "PYTHON=C:\Program Files\Python312\python.exe"
 set "PIP=C:\Program Files\Python312\Scripts\pip.exe"
+
+:: Verify Python is reachable
+"%PYTHON%" --version
+if %errorlevel% neq 0 (
+    echo ERROR: python.exe not found at expected path after installation.
+    pause
+    exit /b 1
+)
 
 :: ── 2. Upgrade pip ───────────────────────────────────────────
 echo.
