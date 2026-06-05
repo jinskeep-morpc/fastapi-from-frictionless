@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 def empty_excel(schema_folder, output_filepath):
     schemas = [file for file in os.listdir(schema_folder) if file.endswith("schema.yaml")]
 
-    with pd.ExcelWriter(output_filepath) as writer:
+    with pd.ExcelWriter(output_filepath, engine='xlsxwriter') as writer:
         logger.info(
             f"Writing empty excel file ({output_filepath}) based on schemas in {schema_folder}."
         )
@@ -110,7 +110,7 @@ def dump_to_excel(
     if api_key:
         session.headers.update({"x-api-key": api_key})
 
-    with pd.ExcelWriter(output_filepath) as writer:
+    with pd.ExcelWriter(output_filepath, engine='xlsxwriter') as writer:
         logger.info(f"Dumping API data to {output_filepath}")
         for schema_file in schemas:
             name = schema_file.replace(".schema.yaml", "")
