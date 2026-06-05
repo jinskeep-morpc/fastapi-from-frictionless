@@ -35,8 +35,30 @@ An ASGI server such as [uvicorn](https://www.uvicorn.org/) is required to run th
 ## Installation
 
 ```bash
-pip install -e .
+pip install fastapifromfrictionless
 ```
+
+For environments that run the **generated app** (FK query endpoints, geo field types):
+
+```bash
+pip install "fastapifromfrictionless[app]"
+```
+
+### Windows
+
+The base install works on Windows without any prerequisites.
+
+The `[app]` extra includes `geoalchemy2`, which requires **GDAL**. If your schemas use geographic field types, install GDAL first:
+
+> [GDAL installation guide for Windows](https://github.com/djayepro3/gdal-easy-installation-guide-windows-linux-macos/blob/main/README.md#%EF%B8%8F-installation-on-windows)
+
+Then install the extra:
+
+```bash
+pip install "fastapifromfrictionless[app]"
+```
+
+If your schemas do not use geo fields, `pip install fastapifromfrictionless` is sufficient and no GDAL install is needed.
 
 ## Quick Start
 
