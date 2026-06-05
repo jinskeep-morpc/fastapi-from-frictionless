@@ -19,28 +19,22 @@ RUN mkdir -p /generator/api && \
 
 # Stage 2 — lean runtime image
 #
-# Installs only the packages needed to serve the generated FastAPI app.
-# frictionless[generate] and jinja2 are excluded — code generation already
-# happened in Stage 1.
+# [app] extra adds fastapi_querybuilder (FK query endpoints) and geoalchemy2
+# (geo field types). uvicorn and psycopg2-binary are server/DB deps not in
+# the package itself.
 FROM python:3.12-slim
 ARG PACKAGE_VERSION
 WORKDIR /app
 RUN if [ -n "$PACKAGE_VERSION" ]; then \
       pip install --no-cache-dir \
-        "fastapifromfrictionless==${PACKAGE_VERSION}" \
+        "fastapifromfrictionless[app]==${PACKAGE_VERSION}" \
         "uvicorn[standard]" \
-        psycopg2-binary \
-        geoalchemy2 \
-        python-multipart \
-        "frictionless[excel]"; \
+        psycopg2-binary; \
     else \
       pip install --no-cache-dir \
-        fastapifromfrictionless \
+        "fastapifromfrictionless[app]" \
         "uvicorn[standard]" \
-        psycopg2-binary \
-        geoalchemy2 \
-        python-multipart \
-        "frictionless[excel]"; \
+        psycopg2-binary; \
     fi
 COPY --from=generator /generator/api/ /app/api/
 
