@@ -1,3 +1,13 @@
+## v0.2.19 — Dependency audit: remove redundant/misclassified packages (2026-06-05)
+
+- Remove `sqlalchemy` from core (redundant — SQLModel already requires it)
+- Remove `geoalchemy2` from core → add to new `[app]` optional extra (never imported by the package itself; requires GDAL on Windows which blocked clean install)
+- Remove `fastapi_querybuilder` from core → add to `[app]` extra (never imported by the package itself, only emitted into generated app.py)
+- Remove duplicate `frictionless` from `[generate]` and `[dev]` extras (already in core as `frictionless[excel]`)
+- `podman/Dockerfile` Stage 2 now installs `fastapifromfrictionless[app]` instead of listing packages individually
+- Pin `engine="xlsxwriter"` on both `pd.ExcelWriter` calls in `runtime/excel.py` to prevent silent openpyxl fallback and `AttributeError` on `.autofit()`
+- Add Windows installation section to README with GDAL guidance and link
+
 ## v0.2.18 — Fix NameError in generated app (2026-06-03)
 
 Remove `background_tasks: BackgroundTasks = None` from `import_excel` signature — `BackgroundTasks` was dropped from imports in v0.2.17 but left in the function signature, causing `NameError` at startup in all generated apps. Also removes dead imports `from sqlalchemy import text` and `from sqlalchemy.ext.asyncio import AsyncSession` from the generated `app.py`.
