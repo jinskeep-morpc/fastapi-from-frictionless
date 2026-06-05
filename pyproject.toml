@@ -21,17 +21,17 @@ dependencies = [
     "pandas",
     "SQLmodel",
     "FastAPI",
-    "fastapi_querybuilder",
-    "sqlalchemy",
     "xlsxwriter",
-    "geoalchemy2",
     "python-multipart",
     "frictionless[excel]",
 ]
 
 [project.optional-dependencies]
+app = [
+    "fastapi_querybuilder",
+    "geoalchemy2",
+]
 generate = [
-    "frictionless",
     "jinja2",
 ]
 dev = [
@@ -39,7 +39,6 @@ dev = [
     "ruff",
     "mypy",
     "openpyxl",
-    "frictionless",
     "jinja2",
 ]
 
