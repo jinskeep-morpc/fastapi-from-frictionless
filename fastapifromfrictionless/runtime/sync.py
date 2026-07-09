@@ -49,12 +49,12 @@ def update_api_from_package(api_url, package_file, skip=[], api_key: str = "", m
         logger.info(f"Getting all data for {table_name}")
         try:
             current_all = requests_get_all(session, server_url=api_url, endpoint=table_name)
-        except fastapi.exceptions.RequestValidationError as e:
+        except fastapi.exceptions.RequestValidationError:
             logger.error(f"{resource} not valid table at {api_url}")
-            raise fastapi.exceptions.RequestValidationError(e)
+            raise
         except fastapi.HTTPException as e:
             logger.error(f"HTTP Error {e}")
-            raise fastapi.HTTPException
+            raise
 
         if len(current_all) == 0:
             current_index = []
