@@ -30,7 +30,7 @@ def recent_<< name_lower >>s(*, session: Session = Depends(get_session), limit: 
 <% if has_fk %>
 
 @app.get('/<< name_lower >>/query', response_model=list[<< name >>PublicWithAll])
-async def query_<< name_lower >>s(*, session: AsyncSession = Depends(get_session), query=QueryBuilder(<< name >>)):
+def query_<< name_lower >>s(*, session: Session = Depends(get_session), query=QueryBuilder(<< name >>)):
     << name_lower >>s = session.execute(query)
     return << name_lower >>s.scalars().all()
 <% endif %>
