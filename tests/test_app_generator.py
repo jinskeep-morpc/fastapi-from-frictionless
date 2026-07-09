@@ -130,6 +130,15 @@ def test_query_route_generated_with_fk(fk_folder):
     assert "query_deployment" in out
 
 
+def test_query_route_uses_sync_session(fk_folder):
+    # Regression: the FK /query endpoint annotated its session as AsyncSession,
+    # which is never imported and is wrong for this sync engine, so importing
+    # the generated app.py raised NameError: name 'AsyncSession' is not defined.
+    out = _output(fk_folder)
+    assert "AsyncSession" not in out
+    assert "def query_deployments(*, session: Session = Depends(get_session)" in out
+
+
 # ---------------------------------------------------------------------------
 # Multiple schemas
 # ---------------------------------------------------------------------------
