@@ -108,7 +108,9 @@ def test_export_uses_named_temporary_file(simple_folder, tmp_path):
 
 def test_export_schedules_temp_file_cleanup(simple_folder, tmp_path):
     content = _saved(simple_folder, tmp_path)
-    assert "background_tasks.add_task(os.unlink" in content
+    # Export reads the file into memory then unlinks the temp file directly;
+    # the heavy dump is offloaded via asyncio.to_thread (no BackgroundTasks).
+    assert "os.unlink(tmp_path)" in content
 
 
 def test_import_does_not_write_to_schema_folder(simple_folder, tmp_path):
@@ -138,11 +140,6 @@ def test_import_cleans_up_generated_package_yaml(simple_folder, tmp_path):
 def test_asyncio_imported(simple_folder, tmp_path):
     content = _saved(simple_folder, tmp_path)
     assert "import asyncio" in content
-
-
-def test_background_tasks_imported(simple_folder, tmp_path):
-    content = _saved(simple_folder, tmp_path)
-    assert "BackgroundTasks" in content
 
 
 def test_export_handler_is_async(simple_folder, tmp_path):
