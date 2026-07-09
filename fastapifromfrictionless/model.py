@@ -33,6 +33,7 @@ type_map = {
     "any": {"default": "str"},
 }
 
+
 class models:
     _models_logger = logging.getLogger(__name__).getChild(__qualname__)
 
@@ -114,9 +115,7 @@ class models:
 
             if field.name in foreign_keys:
                 if " = Field(primary_key = True)" in field_string:
-                    field_string = (
-                        f"{field_string.rstrip(')')}, foreign_key='{field.name.replace('_', '.')}', index=True)"
-                    )
+                    field_string = f"{field_string.rstrip(')')}, foreign_key='{field.name.replace('_', '.')}', index=True)"
                 else:
                     field_string += f" = Field({'default=None, ' if required else ''}foreign_key='{field.name.replace('_', '.')}', index=True)"
 

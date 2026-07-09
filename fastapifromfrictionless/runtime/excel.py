@@ -5,9 +5,9 @@ from contextlib import chdir
 from datetime import datetime
 
 import frictionless
+import pandas as pd
 from frictionless.formats import ExcelControl
 from frictionless.resources import TableResource
-import pandas as pd
 
 from .http import requests_get_all
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 def empty_excel(schema_folder, output_filepath):
     schemas = [file for file in os.listdir(schema_folder) if file.endswith("schema.yaml")]
 
-    with pd.ExcelWriter(output_filepath, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output_filepath, engine="xlsxwriter") as writer:
         logger.info(
             f"Writing empty excel file ({output_filepath}) based on schemas in {schema_folder}."
         )
@@ -51,7 +51,9 @@ def create_package(folder: str | os.PathLike, filename: str | os.PathLike, valid
             schema_name = schema.replace(".schema.yaml", "")
             # Strip foreign keys before standalone infer — frictionless requires the
             # full package context to resolve cross-resource FK references.
-            schema_descriptor = frictionless.Schema.from_descriptor(str(schema_folder / schema)).to_descriptor()
+            schema_descriptor = frictionless.Schema.from_descriptor(
+                str(schema_folder / schema)
+            ).to_descriptor()
             schema_descriptor.pop("foreignKeys", None)
             resource = TableResource(
                 name=schema_name,
@@ -86,7 +88,10 @@ def create_package(folder: str | os.PathLike, filename: str | os.PathLike, valid
 
 
 def dump_to_excel(
-    api_url: str, schema_folder: str | os.PathLike, output_filepath: str | os.PathLike, api_key: str = ""
+    api_url: str,
+    schema_folder: str | os.PathLike,
+    output_filepath: str | os.PathLike,
+    api_key: str = "",
 ):
     """Fetch all records from each API endpoint and write them to an Excel workbook.
 
@@ -110,7 +115,7 @@ def dump_to_excel(
     if api_key:
         session.headers.update({"x-api-key": api_key})
 
-    with pd.ExcelWriter(output_filepath, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output_filepath, engine="xlsxwriter") as writer:
         logger.info(f"Dumping API data to {output_filepath}")
         for schema_file in schemas:
             name = schema_file.replace(".schema.yaml", "")

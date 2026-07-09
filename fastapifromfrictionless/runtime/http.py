@@ -8,9 +8,7 @@ from requests import Session
 logger = logging.getLogger(__name__)
 
 
-def requests_post(
-    session: Session | None, server_url: str | os.PathLike, endpoint: str, model
-):
+def requests_post(session: Session | None, server_url: str | os.PathLike, endpoint: str, model):
     if session is None:
         session = requests.Session()
     logger.debug(f"Posting {model.model_dump_json()} to {server_url}/{endpoint}.")
@@ -23,7 +21,11 @@ def requests_post(
 
 
 def requests_bulk_post(
-    session: Session | None, server_url: str | os.PathLike, endpoint: str, rows: list, api_key: str = ""
+    session: Session | None,
+    server_url: str | os.PathLike,
+    endpoint: str,
+    rows: list,
+    api_key: str = "",
 ) -> list:
     """POST a batch of rows to ``/{endpoint}s/bulk`` in a single request."""
     if session is None:

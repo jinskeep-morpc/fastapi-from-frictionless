@@ -82,7 +82,7 @@ def test_allow_no_auth_logs_warning(simple_folder, tmp_path):
 def test_deprecated_on_event_startup_removed(simple_folder, tmp_path):
     content = _saved(simple_folder, tmp_path)
     assert "@app.on_event('startup')" not in content
-    assert "@app.on_event(\"startup\")" not in content
+    assert '@app.on_event("startup")' not in content
 
 
 def test_create_db_and_tables_called_in_lifespan(simple_folder, tmp_path):

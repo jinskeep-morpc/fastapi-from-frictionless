@@ -15,6 +15,7 @@ def get_model(name: str, type: str, models_module=None):
 
     if models_module is None:
         import models
+
         models_module = models
 
     target = f"{name.capitalize()}{type.capitalize()}"
