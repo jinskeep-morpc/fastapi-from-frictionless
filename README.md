@@ -66,8 +66,8 @@ Frictionless `geopoint` and `geojson` fields generate a geoalchemy2 column rathe
 annotation:
 
 ```python
-location: Any | None = Field(default=None, sa_column=Column(Geometry('POINT')))
-footprint: Any = Field(sa_column=Column(Geometry('GEOMETRY'), nullable=False))
+location: Any | None = Field(default=None, sa_column=Column(Geometry("POINT")))
+footprint: Any = Field(sa_column=Column(Geometry("GEOMETRY"), nullable=False))
 ```
 
 **These columns require a spatial database.** `create_db_and_tables()` fails on plain SQLite
@@ -132,7 +132,10 @@ For each schema resource, the generated app exposes the following endpoints (rep
 
 ```python
 from fastapifromfrictionless.runtime import (
-    empty_excel, create_package, update_api_from_package, dump_to_excel
+    empty_excel,
+    create_package,
+    update_api_from_package,
+    dump_to_excel,
 )
 
 # Create a blank workbook with one sheet per schema
@@ -143,7 +146,9 @@ create_package(folder="path/to/schemas", filename="data.xlsx")
 update_api_from_package(api_url="http://localhost:8000", package_file="data.package.yaml")
 
 # Or export all current API data to Excel
-dump_to_excel(api_url="http://localhost:8000", schema_folder="path/to/schemas", output_filepath="export.xlsx")
+dump_to_excel(
+    api_url="http://localhost:8000", schema_folder="path/to/schemas", output_filepath="export.xlsx"
+)
 ```
 
 ### 6. CLI reference
