@@ -311,6 +311,10 @@ def geo_folder(tmp_path):
             type: integer
           - name: location
             type: geopoint
+          - name: footprint
+            type: geojson
+            constraints:
+              required: true
         primaryKey:
           - id
         """,
@@ -328,3 +332,53 @@ def test_non_geo_schema_omits_geoalchemy2_import(simple_folder, tmp_path):
     out = tmp_path / "models.py"
     models(folder_str(simple_folder)).build().save(out)
     assert "geoalchemy2" not in out.read_text()
+
+
+def test_geo_field_uses_sa_column_not_bare_geometry_annotation(geo_folder, tmp_path):
+    # Regression (#132): the geo types were emitted straight into the annotation slot as
+    # `location: Geometry('POINT') | None`, which raises TypeError at class creation.
+    out = tmp_path / "models.py"
+    models(folder_str(geo_folder)).build().save(out)
+    text = out.read_text()
+    assert "Geometry('POINT') | None" not in text
+    assert "location: Any | None = Field(default=None, sa_column=Column(Geometry('POINT')))" in text
+
+
+def test_required_geo_field_is_non_nullable(geo_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(geo_folder)).build().save(out)
+    assert (
+        "footprint: Any = Field(sa_column=Column(Geometry('GEOMETRY'), nullable=False))"
+        in out.read_text()
+    )
+
+
+def test_geo_schema_imports_Column(geo_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(geo_folder)).build().save(out)
+    assert "from sqlalchemy import Column, DateTime" in out.read_text()
+
+
+def test_non_geo_schema_omits_Column_import(simple_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(simple_folder)).build().save(out)
+    assert "from sqlalchemy import DateTime" in out.read_text()
+    assert "Column" not in out.read_text()
+
+
+def test_generated_geo_models_are_importable(geo_folder, tmp_path):
+    """The bug in #132 was invisible to text assertions: import the module and check it."""
+    import importlib.util
+    import sys
+
+    out = tmp_path / "models.py"
+    models(folder_str(geo_folder)).build().save(out)
+
+    spec = importlib.util.spec_from_file_location("generated_geo_models", out)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["generated_geo_models"] = module
+    try:
+        spec.loader.exec_module(module)  # raised TypeError before the fix
+        assert module.Site.__tablename__ == "site"
+    finally:
+        sys.modules.pop("generated_geo_models", None)
