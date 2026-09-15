@@ -1,3 +1,24 @@
+# 2026-09-15 — geo fields generated non-importable models (#132)
+
+`type_map` mapped `geopoint`/`geojson` to the expression `Geometry('POINT')`, which landed in
+the annotation slot and got ` | None` appended for optional fields. `location: Geometry('POINT') | None`
+raises `TypeError` at class creation, so a single geo field made the whole generated `models.py`
+unimportable — not just that model.
+
+Fixed by splitting the geo types into `geo_type_map` and emitting `Any` plus an `sa_column`:
+`Field(default=None, sa_column=Column(Geometry('POINT')))`, or `nullable=False` when required.
+The header template now imports `Column` when a geo field is present.
+
+The reason this survived: the only geopoint test asserted that the `geoalchemy2` import line
+appeared in the output *text*. Text assertions cannot see invalid Python. Added a test that
+execs the generated module, plus assertions for both the optional and required forms.
+
+Caveat worth knowing: even with valid annotations, geo columns cannot be created on plain
+SQLite — geoalchemy2 emits `RecoverGeometryColumn`, a SpatiaLite function, and
+`create_db_and_tables()` fails. The generated `database.py` defaults to SQLite, so any schema
+with a geo field needs PostGIS (as in the podman stack) or SpatiaLite loaded. Not addressed
+here; flagged in the PR.
+
 ## v0.2.19 — Dependency audit: remove redundant/misclassified packages (2026-06-05)
 
 - Remove `sqlalchemy` from core (redundant — SQLModel already requires it)

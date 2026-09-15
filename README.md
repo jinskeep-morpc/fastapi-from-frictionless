@@ -60,6 +60,21 @@ pip install "fastapifromfrictionless[app]"
 
 If your schemas do not use geo fields, `pip install fastapifromfrictionless` is sufficient and no GDAL install is needed.
 
+### Geo field types
+
+Frictionless `geopoint` and `geojson` fields generate a geoalchemy2 column rather than a plain
+annotation:
+
+```python
+location: Any | None = Field(default=None, sa_column=Column(Geometry('POINT')))
+footprint: Any = Field(sa_column=Column(Geometry('GEOMETRY'), nullable=False))
+```
+
+**These columns require a spatial database.** `create_db_and_tables()` fails on plain SQLite
+with `no such function: RecoverGeometryColumn`, because geoalchemy2 emits SpatiaLite calls.
+The generated `database.py` defaults to SQLite, so a schema with a geo field needs
+`DATABASE_URL` pointed at PostGIS (as in the `podman/` stack) or SpatiaLite loaded into SQLite.
+
 ## Quick Start
 
 ### 1. Generate application files from schemas
