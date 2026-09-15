@@ -28,9 +28,15 @@ type_map = {
     "year": {"default": "int"},
     "yearmonth": {"default": "str"},
     "duration": {"default": "timedelta"},
-    "geopoint": {"default": "Geometry('POINT')"},
-    "geojson": {"default": "Geometry('GEOMETRY')"},
     "any": {"default": "str"},
+}
+
+# Frictionless geo types map to a geoalchemy2 column rather than a plain annotation.
+# The value is the geometry type passed to Geometry(); the Python annotation is `Any`
+# because geoalchemy2 exposes no static type for the column.
+geo_type_map = {
+    "geopoint": "POINT",
+    "geojson": "GEOMETRY",
 }
 
 
@@ -98,6 +104,21 @@ class models:
             field = schema.get_field(field_name)
 
             if (field.name == "id") and auto_id:
+                continue
+
+            if field.type in geo_type_map:
+                geometry = f"Geometry('{geo_type_map[field.type]}')"
+                if "required" in field.constraints:
+                    field_string = (
+                        f"{field.name}: Any = Field(sa_column=Column({geometry}, nullable=False))"
+                    )
+                else:
+                    field_string = (
+                        f"{field.name}: Any | None = "
+                        f"Field(default=None, sa_column=Column({geometry}))"
+                    )
+                self.logger.info(f"{field} converted to {field_string}")
+                basemodel_fields.append(field_string)
                 continue
 
             field_string = f"{field.name}: "
