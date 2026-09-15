@@ -40,6 +40,8 @@ dev = [
     "mypy",
     "openpyxl",
     "jinja2",
+    # Generated geo models import geoalchemy2; the #132 regression test execs them.
+    "geoalchemy2",
 ]
 
 [project.scripts]
