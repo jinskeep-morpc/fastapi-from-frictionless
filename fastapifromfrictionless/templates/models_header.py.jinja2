@@ -1,7 +1,11 @@
 
 from typing import Any, Optional, List
 from uuid import UUID
+<% if has_geo %>
+from sqlalchemy import Column, DateTime
+<% else %>
 from sqlalchemy import DateTime
+<% endif %>
 from sqlmodel import Field, Relationship, SQLModel
 from datetime import date, datetime, timezone, time, timedelta
 from pydantic import EmailStr, AnyUrl, Json
