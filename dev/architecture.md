@@ -245,7 +245,8 @@ A small utility. Call `configure_logging()` at the start of a script to turn on 
 
 ```python
 from fastapifromfrictionless import configure_logging
-configure_logging(level="DEBUG")   # now you'll see detailed logs
+
+configure_logging(level="DEBUG")  # now you'll see detailed logs
 ```
 
 ---
@@ -313,29 +314,33 @@ class SurveyBase(SQLModel):
     title: str
     created_date: date | None
 
+
 class Survey(SurveyBase, TimestampMixin, table=True):
     id: int | None = Field(default=None, primary_key=True)
+
 
 class SurveyCreate(SurveyBase):
     pass
 
+
 class SurveyUpdate(SurveyBase):
     title: str | None
     created_date: date | None
+
 
 class SurveyPublic(SurveyBase):
     id: int
     created_at: datetime
     updated_at: datetime
 
-# in app.py
-@app.post('/survey', response_model=SurveyPublic)
-def create_survey(*, session: Session = Depends(get_session), survey: SurveyCreate):
-    ...
 
-@app.get('/survey/all', response_model=list[SurveyPublic])
-def read_surveys(*, session: Session = Depends(get_session), offset: int = 0, limit: int = ...):
-    ...
+# in app.py
+@app.post("/survey", response_model=SurveyPublic)
+def create_survey(*, session: Session = Depends(get_session), survey: SurveyCreate): ...
+
+
+@app.get("/survey/all", response_model=list[SurveyPublic])
+def read_surveys(*, session: Session = Depends(get_session), offset: int = 0, limit: int = ...): ...
 ```
 
 ---
