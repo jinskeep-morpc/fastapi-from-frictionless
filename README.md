@@ -201,6 +201,11 @@ that does not resolve falls back to the filtered list.
 Map tiles come from OpenStreetMap by default. `UI_MAP_TILE_URL` and `UI_MAP_ATTRIBUTION` point
 at another source — your own tile server, or a provider with an API key.
 
+Where a primary key is an auto-incrementing integer, the create form shows the next value
+read-only rather than an empty box. The generator omits such a key from the Create model, so
+anything typed there would be discarded — the number is what the record will almost certainly be
+called, not a choice being offered.
+
 Geometry columns are shown, never edited: they render as a map and coordinates on the detail
 page, and forms leave them out entirely rather than round-tripping a binary value through a text
 box. Populating them is a per-schema concern — a trigger deriving the point from latitude and

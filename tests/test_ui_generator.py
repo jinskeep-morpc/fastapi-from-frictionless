@@ -564,3 +564,95 @@ def test_primary_keys_are_url_encoded_in_links(rel_ui):
     from fastapifromfrictionless.web.router import _pk_of
 
     assert _pk_of(type("R", (), {"code": "a b"})(), {"pk": ["code"]}) == "a b"
+
+
+# ---------------------------------------------------------------------------
+# Auto-assigned integer keys (#160)
+# ---------------------------------------------------------------------------
+
+
+class UiTicket(SQLModel, table=True):
+    __tablename__ = "ui_ticket"
+    id: int | None = Field(default=None, primary_key=True)
+    subject: str
+
+
+class UiTicketCreate(SQLModel):
+    # The generator omits an auto-incrementing key from Create; this mirrors it.
+    subject: str
+
+
+class UiTicketUpdate(SQLModel):
+    subject: str | None = None
+
+
+AUTO_RESOURCES = {
+    "ticket": {
+        "label": "Ticket",
+        "pk": ["id"],
+        "table": UiTicket,
+        "create": UiTicketCreate,
+        "update": UiTicketUpdate,
+        "fields": [
+            {"name": "id", "type": "integer", "required": True, "fk": None},
+            {"name": "subject", "type": "string", "required": True, "fk": None},
+        ],
+    }
+}
+
+
+@pytest.fixture()
+def auto_ui(monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from sqlalchemy.pool import StaticPool
+    from sqlmodel import Session, create_engine
+
+    from fastapifromfrictionless.web import build_ui_app
+
+    monkeypatch.setenv("ALLOW_NO_AUTH", "true")
+    monkeypatch.delenv("API_KEY", raising=False)
+    monkeypatch.delenv("UI_PROXY_IDENTITY_HEADER", raising=False)
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    UiTicket.__table__.create(engine)
+    with Session(engine) as s:
+        s.add(UiTicket(id=4, subject="existing"))
+        s.commit()
+
+    def get_session():
+        with Session(engine) as session:
+            yield session
+
+    parent = FastAPI()
+    parent.mount("/ui", build_ui_app(AUTO_RESOURCES, get_session))
+    yield TestClient(parent)
+    engine.dispose()
+
+
+def test_auto_key_is_prefilled_with_the_next_value(auto_ui):
+    body = auto_ui.get("/ui/ticket/new").text
+    assert 'value="5"' in body
+    assert "assigned automatically on save" in body
+
+
+def test_auto_key_is_not_editable(auto_ui):
+    """Whatever is typed is discarded - the field is not on the Create model -
+    so an editable box asks a question with no answer."""
+    body = auto_ui.get("/ui/ticket/new").text
+    field = body.split('id="id"', 1)[1].split(">", 1)[0]
+    assert "readonly" in field
+
+
+def test_next_value_starts_at_one_on_an_empty_table(auto_ui):
+    auto_ui.delete("/ui/ticket/4")
+    assert 'value="1"' in auto_ui.get("/ui/ticket/new").text
+
+
+def test_a_normal_key_is_still_editable(rel_ui):
+    """owner.id is on the Create model, so the user chooses it."""
+    body = rel_ui.get("/ui/owner/new").text
+    field = body.split('id="id"', 1)[1].split(">", 1)[0]
+    assert "readonly" not in field

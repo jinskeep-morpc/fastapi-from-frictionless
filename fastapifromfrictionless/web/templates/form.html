@@ -15,7 +15,13 @@
     <label for="{{ f.name }}" class="{{ 'req' if f.required else '' }}">
       {{ f.name }}{% if f.fk %} <span class="muted">&rarr; {{ f.fk }}</span>{% endif %}
     </label>
-    {% if f.type in ("geopoint", "geojson") %}
+    {% if not pk and auto_keys is defined and f.name in auto_keys %}
+      {# Assigned by the database: show what it will be, but do not invite a
+         value the Create model would discard. #}
+      <input id="{{ f.name }}" name="{{ f.name }}" type="text"
+             value="{{ auto_keys[f.name] }}" readonly>
+      <span class="muted" style="font-size:.8rem">assigned automatically on save</span>
+    {% elif f.type in ("geopoint", "geojson") %}
       {# No input: geometry is derived, and round-tripping its binary
          representation through a text box would be meaningless. #}
       <p class="muted" style="margin:.2rem 0 0;font-size:.85rem">

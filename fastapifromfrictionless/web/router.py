@@ -209,6 +209,7 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
                 row=None,
                 errors=None,
                 options=_fk_options(res, resources, session),
+                auto_keys=_auto_keys(res, session),
             ),
         )
 
@@ -239,6 +240,7 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
                     row=values,
                     errors=str(exc),
                     options=_fk_options(res, resources, session),
+                    auto_keys=_auto_keys(res, session),
                 ),
                 status_code=400,
             )
@@ -409,6 +411,34 @@ def _fk_links(rows, res: dict, resources: dict, slug_of_table: dict, session: Se
             else:
                 links[key] = f"{target_slug}?q={quote(str(value))}"
     return links
+
+
+def _auto_keys(res: dict, session: Session) -> dict:
+    """Primary keys the database assigns, mapped to their next likely value.
+
+    The signal is the Create model: the generator omits an auto-incrementing
+    key from it, so a primary key absent there is one nothing but the database
+    may set. Anything typed into such a field today is silently discarded.
+
+    The value is a prediction, not a reservation - a concurrent insert can take
+    it - which is why the field renders read-only rather than editable.
+    """
+    from sqlalchemy import func as sa_func
+
+    creatable = set(getattr(res["create"], "model_fields", {}))
+    out: dict = {}
+    for name in res["pk"]:
+        if name in creatable:
+            continue
+        field = next((f for f in res["fields"] if f["name"] == name), None)
+        if field is None or field["type"] != "integer":
+            continue
+        try:
+            highest = session.exec(select(sa_func.max(getattr(res["table"], name)))).one()
+        except Exception:  # noqa: BLE001 - never block a form over a hint
+            continue
+        out[name] = (highest or 0) + 1
+    return out
 
 
 def _forward(row, res: dict, resources: dict, slug_of_table: dict, session: Session) -> list:
