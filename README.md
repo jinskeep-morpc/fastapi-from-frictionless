@@ -184,6 +184,12 @@ build step, no JavaScript toolchain.
 `--skip-ui` omits resources. A table with tens of millions of rows should not get a browse page,
 and its count queries would be slow enough to notice.
 
+List views can be filtered and sorted. The search box matches case-insensitively across every
+column — values are cast to text, so it finds numbers and dates as well as strings — and column
+headers sort, toggling ascending and descending. Filter, sort and page survive each other, and
+HTMX swaps just the table so typing narrows the list without a reload. A sort column is checked
+against the resource's own fields, so an unknown one is ignored rather than reaching the query.
+
 Writes go through the same models as the API, so validation is not bypassed.
 
 #### Signing in

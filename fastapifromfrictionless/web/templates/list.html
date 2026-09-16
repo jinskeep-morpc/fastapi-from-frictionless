@@ -2,41 +2,16 @@
 {% block title %}{{ res.label }}{% endblock %}
 {% block body %}
 <h1>{{ res.label }} <span class="muted" style="font-weight:400;font-size:.8em">{{ "{:,}".format(total) }}</span></h1>
-<p><a class="btn primary" href="{{ prefix }}/{{ slug }}/new">New {{ res.label|lower }}</a></p>
-{% if rows %}
-<table>
-  <thead><tr>
-    {% for f in res.fields %}<th>{{ f.name }}</th>{% endfor %}
-    <th></th>
-  </tr></thead>
-  <tbody>
-  {% for row in rows %}
-    {% set rowpk = pk_of(row, res) %}
-    <tr id="row-{{ loop.index }}">
-      {% for f in res.fields %}
-        {% set v = row[f.name] if row is mapping else row|attr(f.name) %}
-        <td title="{{ v if v is not none else '' }}">{{ "" if v is none else v }}</td>
-      {% endfor %}
-      <td style="white-space:nowrap">
-        <a class="btn" href="{{ prefix }}/{{ slug }}/{{ rowpk }}/edit">Edit</a>
-        <button class="btn danger"
-                hx-delete="{{ prefix }}/{{ slug }}/{{ rowpk }}"
-                hx-target="#row-{{ loop.index }}"
-                hx-swap="outerHTML"
-                hx-confirm="Delete this {{ res.label|lower }}? This cannot be undone.">Delete</button>
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% if pages > 1 %}
-<div class="pager">
-  {% if page > 1 %}<a class="btn" href="{{ prefix }}/{{ slug }}?page={{ page - 1 }}">Previous</a>{% endif %}
-  <span class="muted">Page {{ page }} of {{ pages }}</span>
-  {% if page < pages %}<a class="btn" href="{{ prefix }}/{{ slug }}?page={{ page + 1 }}">Next</a>{% endif %}
+<div class="toolbar">
+  <a class="btn primary" href="{{ prefix }}/{{ slug }}/new">New {{ res.label|lower }}</a>
+  <input class="search" type="search" name="q" value="{{ q }}"
+         placeholder="Filter {{ res.label|lower }}…" autocomplete="off"
+         hx-get="{{ prefix }}/{{ slug }}"
+         hx-trigger="input changed delay:300ms, search"
+         hx-target="#table-wrap" hx-swap="outerHTML" hx-push-url="true"
+         hx-include="[name='sort'],[name='dir']">
+  <input type="hidden" name="sort" value="{{ sort }}">
+  <input type="hidden" name="dir" value="{{ dir }}">
 </div>
-{% endif %}
-{% else %}
-<p class="muted">No records yet.</p>
-{% endif %}
+{% include "_table.html" %}
 {% endblock %}

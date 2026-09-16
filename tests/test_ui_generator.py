@@ -3,6 +3,7 @@
 import textwrap
 
 import pytest
+from sqlmodel import Field, SQLModel
 
 from fastapifromfrictionless.uigen import ui
 
@@ -205,3 +206,145 @@ def test_missing_proxy_header_falls_back_to_cookie(monkeypatch):
         headers: dict = {}
 
     assert auth.identify(Req()) == "signed in"
+
+
+# ---------------------------------------------------------------------------
+# List filtering and ordering (#151)
+# ---------------------------------------------------------------------------
+
+
+# Declared at module scope, not inside the fixture: SQLModel's registry is
+# global, so a class defined per-test is re-registered on every run and
+# eventually raises InvalidRequestError. The table name is distinctive to avoid
+# colliding with the generated modules other tests exec.
+class UiThing(SQLModel, table=True):
+    __tablename__ = "ui_thing"
+    code: str = Field(primary_key=True)
+    label: str
+    rank: int
+
+
+class UiThingCreate(SQLModel):
+    code: str
+    label: str
+    rank: int
+
+
+class UiThingUpdate(SQLModel):
+    code: str | None = None
+    label: str | None = None
+    rank: int | None = None
+
+
+UI_RESOURCES = {
+    "thing": {
+        "label": "Thing",
+        "pk": ["code"],
+        "table": UiThing,
+        "create": UiThingCreate,
+        "update": UiThingUpdate,
+        "fields": [
+            {"name": "code", "type": "string", "required": True, "fk": None},
+            {"name": "label", "type": "string", "required": True, "fk": None},
+            {"name": "rank", "type": "integer", "required": True, "fk": None},
+        ],
+    }
+}
+
+
+@pytest.fixture()
+def live_ui(monkeypatch):
+    """A running UI over an in-memory SQLite database with a few rows."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from sqlalchemy.pool import StaticPool
+    from sqlmodel import Session, create_engine
+
+    from fastapifromfrictionless.web import build_ui_app
+
+    monkeypatch.setenv("ALLOW_NO_AUTH", "true")
+    monkeypatch.delenv("API_KEY", raising=False)
+    monkeypatch.delenv("UI_PROXY_IDENTITY_HEADER", raising=False)
+
+    # StaticPool: an in-memory SQLite database is per-connection, so without it
+    # the app's sessions would each open an empty one and see no tables.
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    UiThing.__table__.create(engine)
+    with Session(engine) as s:
+        for code, label, rank in [
+            ("alpha", "First thing", 3),
+            ("beta", "Second thing", 1),
+            ("gamma", "Third thing", 2),
+        ]:
+            s.add(UiThing(code=code, label=label, rank=rank))
+        s.commit()
+
+    def get_session():
+        with Session(engine) as session:
+            yield session
+
+    parent = FastAPI()
+    parent.mount("/ui", build_ui_app(UI_RESOURCES, get_session))
+    yield TestClient(parent)
+    engine.dispose()
+
+
+def _codes(html):
+    """Order-preserving list of the codes appearing in table cells."""
+    import re
+
+    return re.findall(r"<td[^>]*>(alpha|beta|gamma)</td>", html)
+
+
+def test_list_unfiltered_shows_everything(live_ui):
+    body = live_ui.get("/ui/thing").text
+    assert set(_codes(body)) == {"alpha", "beta", "gamma"}
+
+
+def test_filter_narrows_rows(live_ui):
+    assert _codes(live_ui.get("/ui/thing?q=alph").text) == ["alpha"]
+
+
+def test_filter_matches_non_text_columns(live_ui):
+    """Columns are cast to text so a search hits numbers and dates too."""
+    assert _codes(live_ui.get("/ui/thing?q=2").text) == ["gamma"]
+
+
+def test_sort_ascending_and_descending(live_ui):
+    assert _codes(live_ui.get("/ui/thing?sort=rank&dir=asc").text) == ["beta", "gamma", "alpha"]
+    assert _codes(live_ui.get("/ui/thing?sort=rank&dir=desc").text) == ["alpha", "gamma", "beta"]
+
+
+def test_filter_and_sort_compose(live_ui):
+    body = live_ui.get("/ui/thing?q=thing&sort=rank&dir=desc").text
+    assert _codes(body) == ["alpha", "gamma", "beta"]
+
+
+def test_unknown_sort_column_is_ignored(live_ui):
+    """A sort column is interpolated into the query, so it must be validated
+    against the resource's own fields rather than trusted."""
+    for attempt in ("nonexistent", "rank; DROP TABLE thing", "__class__"):
+        response = live_ui.get("/ui/thing", params={"sort": attempt})
+        assert response.status_code == 200
+        assert set(_codes(response.text)) == {"alpha", "beta", "gamma"}
+
+
+def test_htmx_request_returns_the_table_only(live_ui):
+    full = live_ui.get("/ui/thing").text
+    partial = live_ui.get("/ui/thing", headers={"HX-Request": "true"}).text
+    assert "<html" in full
+    assert "<html" not in partial
+    assert 'id="table-wrap"' in partial
+
+
+def test_page_is_clamped_when_a_filter_shrinks_the_result(live_ui):
+    """Filtering from a high page must not land on an empty page."""
+    assert _codes(live_ui.get("/ui/thing?page=99&q=alpha").text) == ["alpha"]
+
+
+def test_no_match_says_so(live_ui):
+    body = live_ui.get("/ui/thing?q=zzzznothing").text
+    assert _codes(body) == []
+    assert "No records match" in body
