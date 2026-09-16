@@ -60,7 +60,7 @@ namespaces = false
 
 [tool.setuptools.package-data]
 "*" = ["*.json"]
-fastapifromfrictionless = ["templates/*.jinja2"]
+fastapifromfrictionless = ["templates/*.jinja2", "web/templates/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

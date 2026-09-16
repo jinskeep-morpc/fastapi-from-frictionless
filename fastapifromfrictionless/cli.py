@@ -8,13 +8,16 @@ def _generate(args):
     from .app import app
     from .database import database
     from .model import models
+    from .uigen import ui
 
     gen_models = not args.no_models
     gen_app = not args.no_app
     gen_db = not args.no_db
+    gen_ui = getattr(args, "with_ui", False)
 
     models_gen = models(args.schema_folder).build() if gen_models else None
-    app_gen = app(args.schema_folder).build() if gen_app else None
+    app_gen = app(args.schema_folder, with_ui=gen_ui).build() if gen_app else None
+    ui_gen = ui(args.schema_folder, skip=getattr(args, "skip_ui", None)).build() if gen_ui else None
     db_gen = database(args.schema_folder).build(args.db_filename) if gen_db else None
 
     if args.dry_run:
@@ -35,12 +38,19 @@ def _generate(args):
         app_gen.save(out / "app.py")
     if db_gen:
         db_gen.save(out / "database.py")
+    if ui_gen:
+        ui_gen.save(out / "ui.py")
     if gen_models or gen_app or gen_db:
         (out / "__init__.py").touch()
 
     generated = [
         f
-        for f, flag in [("models.py", gen_models), ("app.py", gen_app), ("database.py", gen_db)]
+        for f, flag in [
+            ("models.py", gen_models),
+            ("app.py", gen_app),
+            ("database.py", gen_db),
+            ("ui.py", gen_ui),
+        ]
         if flag
     ]
     print(f"Generated {', '.join(generated)} in {out}")
@@ -97,6 +107,19 @@ def main(argv=None):
         "--no-models", action="store_true", default=False, help="Skip generating models.py."
     )
     gen.add_argument("--no-app", action="store_true", default=False, help="Skip generating app.py.")
+    gen.add_argument(
+        "--with-ui",
+        action="store_true",
+        default=False,
+        help="Also generate ui.py, a browser CRUD interface over the same schemas.",
+    )
+    gen.add_argument(
+        "--skip-ui",
+        nargs="*",
+        default=None,
+        metavar="RESOURCE",
+        help="Resources to omit from the UI, e.g. a table too large to browse.",
+    )
     gen.add_argument(
         "--no-db", action="store_true", default=False, help="Skip generating database.py."
     )
