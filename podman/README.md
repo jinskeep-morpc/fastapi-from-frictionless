@@ -168,10 +168,32 @@ All services share a private bridge network (`app_network`). Each service also h
 | `pgadmin` | `{SUBNET_BASE}.0.6` | `PGADMIN_PORT` |
 | `api` | `{SUBNET_BASE}.0.7` | `API_PORT` |
 
+## Network exposure
+
+Services bind to `127.0.0.1` by default, so PostgreSQL, pgAdmin and the API are reachable from
+the host only. Expose them through something that terminates TLS and authenticates — a reverse
+proxy, a Cloudflare Tunnel, or a VPN such as Tailscale.
+
+To publish on every interface instead:
+
+```
+BIND_ADDRESS=0.0.0.0
+```
+
+Do that deliberately. On a host with a public IP it puts an **open PostgreSQL port and a public
+pgAdmin console on the internet**, with only the `.env` passwords in front of them. Open
+database ports are found by scanners within hours.
+
+One trap worth knowing: Docker's port publishing inserts its own iptables rules, which are
+evaluated before a host `ufw` or `firewalld` policy. Closing 5432 in your firewall does **not**
+close a Docker-published 5432, and the firewall will report the port as blocked while it is
+reachable.
+
 ## Environment variable reference
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `BIND_ADDRESS` | `127.0.0.1` | Host interface the published ports listen on. See **Network exposure** below before changing it |
 | `SUBNET_BASE` | `10.91` | First two octets of the internal bridge network; must be unique per simultaneous stack |
 | `API_PORT` | `8000` | Host port for the FastAPI service; must be unique per simultaneous stack |
 | `PGADMIN_PORT` | `5050` | Host port for pgAdmin; must be unique per simultaneous stack |
