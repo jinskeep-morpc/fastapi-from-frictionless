@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class app:
     _app_logger = logger.getChild(__qualname__)
 
-    def __init__(self, folder: str | os.PathLike | SchemaContext):
+    def __init__(self, folder: str | os.PathLike | SchemaContext, with_ui: bool = False):
         """
         Create a app.py file based on all frictionless schemas in a folder.
 
@@ -30,6 +30,7 @@ class app:
         )
         self.folder: str = self._ctx.folder
         self.schema_paths = self._ctx.filenames
+        self.with_ui = with_ui
 
     def build(self):
         self.endpoints = []
@@ -64,6 +65,7 @@ class app:
         )
 
     def save(self, filepath: str | os.PathLike):
-        header = _env.get_template("app_header.py.jinja2").render()
+        header = _env.get_template("app_header.py.jinja2").render(with_ui=self.with_ui)
+        footer = _env.get_template("app_footer.py.jinja2").render() if self.with_ui else ""
         with open(filepath, "w") as file:
-            file.write(header + "".join(self.endpoints))
+            file.write(header + "".join(self.endpoints) + footer)

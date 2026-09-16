@@ -1,3 +1,38 @@
+# 2026-09-16 — generated HTMX CRUD UI (#145)
+
+Generated apps were JSON-only, so editing a record meant curl, Swagger, or an Excel round trip.
+`--with-ui` now emits `ui.py` alongside the API: index, paginated list, create/edit/delete
+forms, with foreign keys rendered as a select of existing values.
+
+The generated file is deliberately thin — a resource descriptor plus a call to
+`build_ui_app`. Views and templates live in `fastapifromfrictionless/web/`, so a template bug is
+fixed by upgrading the package rather than regenerating every downstream project. The Excel
+endpoints already imported package helpers at runtime, so this follows existing precedent.
+
+Three things only surfaced by running it against a real database:
+
+**A router cannot work.** The generated app sets `dependencies=[Depends(verify_api_key)]` on
+`FastAPI(...)`, and an included router inherits it — so the UI's own sign-in page returned 403
+and no browser could ever authenticate. It has to be a mounted sub-application, which does not
+inherit parent dependencies. Everything returned 403 until that changed.
+
+**Starlette's TemplateResponse signature moved.** `TemplateResponse(name, context)` is now
+`(request, name, context)`, and the old form fails deep inside Jinja's cache with
+`TypeError: unhashable type: 'dict'` — the context dict lands where the template name belongs.
+Nothing about the message points at the call site.
+
+**Disabled controls are not submitted.** A readonly text input is, so editing worked for
+ordinary primary keys; a primary key that is also a foreign key renders as a disabled select and
+would have arrived missing. Since the generated Update models make every field
+required-but-nullable, an omitted key fails validation rather than being ignored. Primary keys
+now come from the URL, which is where they are authoritative anyway.
+
+Auth is a shared key in an HttpOnly cookie, so the UI is never unauthenticated by default, with
+`UI_PROXY_IDENTITY_HEADER` to trust an identity-aware proxy instead. A missing proxy header
+falls back to the cookie rather than locking everyone out of a misconfigured deployment. No
+per-user accounts or audit trail; that needs real identity, and the `author` columns on note
+tables will keep being filled in by hand until then.
+
 # 2026-09-16 — compose bound everything to 0.0.0.0 (#142)
 
 `podman/compose.yaml` published ports as bare `HOST:CONTAINER`, which Docker and Podman read as

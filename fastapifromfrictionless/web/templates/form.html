@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if pk else "New" }} {{ res.label|lower }}{% endblock %}
+{% block body %}
+<h1>{{ "Edit" if pk else "New" }} {{ res.label|lower }}</h1>
+{% if errors %}<p class="err">{{ errors }}</p>{% endif %}
+{% macro value_of(f) -%}
+  {%- if row is none -%}{%- elif row is mapping -%}{{ row.get(f.name) if row.get(f.name) is not none else "" }}
+  {%- else -%}{{ row|attr(f.name) if row|attr(f.name) is not none else "" }}{%- endif -%}
+{%- endmacro %}
+<form method="post"
+      action="{{ prefix }}/{{ slug }}/{{ (pk ~ '/edit') if pk else 'new' }}"
+      style="max-width:520px">
+  {% for f in res.fields %}
+    {% set editable = not (pk and f.name in res.pk) %}
+    <label for="{{ f.name }}" class="{{ 'req' if f.required else '' }}">
+      {{ f.name }}{% if f.fk %} <span class="muted">&rarr; {{ f.fk }}</span>{% endif %}
+    </label>
+    {% if f.name in options %}
+      <select id="{{ f.name }}" name="{{ f.name }}" {{ "disabled" if not editable }}>
+        <option value="">{{ "" if f.required else "(none)" }}</option>
+        {% for opt in options[f.name] %}
+          <option value="{{ opt }}" {{ "selected" if value_of(f)|trim == opt|string }}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    {% elif f.type == "boolean" %}
+      <input type="checkbox" id="{{ f.name }}" name="{{ f.name }}"
+             {{ "checked" if value_of(f)|trim in ("True","true","1") }} {{ "disabled" if not editable }}>
+    {% else %}
+      <input id="{{ f.name }}" name="{{ f.name }}"
+             type="{{ {'integer':'number','number':'number','date':'date','datetime':'datetime-local'}.get(f.type,'text') }}"
+             {{ 'step="any"' if f.type == 'number' }}
+             value="{{ value_of(f)|trim }}"
+             {{ "required" if f.required and editable }} {{ "readonly" if not editable }}>
+    {% endif %}
+    {% if not editable %}<span class="muted" style="font-size:.8rem">primary key, not editable</span>{% endif %}
+  {% endfor %}
+  <div class="actions">
+    <button class="btn primary" type="submit">Save</button>
+    <a class="btn" href="{{ prefix }}/{{ slug }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

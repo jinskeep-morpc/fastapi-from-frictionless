@@ -1,0 +1,9 @@
+
+
+# Browser CRUD UI, mounted as a sub-application. It must be mounted rather than
+# included as a router: this app applies verify_api_key as a global dependency,
+# which a router would inherit, making the UI's own sign-in page return 403 and
+# leaving no way for a browser to authenticate.
+from .ui import ui_app
+
+app.mount("/ui", ui_app)

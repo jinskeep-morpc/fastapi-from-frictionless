@@ -166,6 +166,47 @@ Given `deployment.sensor_name` referencing `sensor.name`:
 The singular key (`sensor`) is the many-to-one side and is `null` when the FK is unset; plural
 keys are always lists.
 
+### Browser CRUD UI
+
+Generated apps are JSON-only by default. Add `--with-ui` to also generate `ui.py`, a small
+server-rendered interface for people who need to edit records without curl or Swagger:
+
+```bash
+python -m fastapifromfrictionless.cli generate schemas/ --output api/ \
+    --with-ui --skip-ui reading
+```
+
+It mounts at `/ui` and gives you an index, a paginated list per resource, and create, edit and
+delete forms. Inputs are chosen by field type, and a foreign key renders as a select of existing
+values rather than a free-text id. Jinja2 and HTMX, server-rendered: no separate service, no
+build step, no JavaScript toolchain.
+
+`--skip-ui` omits resources. A table with tens of millions of rows should not get a browse page,
+and its count queries would be slow enough to notice.
+
+Writes go through the same models as the API, so validation is not bypassed.
+
+#### Signing in
+
+The API authenticates with an `X-API-Key` header, which a browser form post cannot send, so the
+UI accepts the same key from an HttpOnly cookie set by a small sign-in page. Nothing is
+reachable without it.
+
+For real per-user identity, put an identity-aware proxy in front — Cloudflare Access, Tailscale,
+oauth2-proxy — and name the header it injects:
+
+```
+UI_PROXY_IDENTITY_HEADER=Cf-Access-Authenticated-User-Email
+```
+
+The UI then trusts that header and shows who is signed in. **Only set this where the proxy is
+the only route to the app**: anything able to reach it directly can forge the header. If the
+header is configured but absent, the UI falls back to the cookie rather than locking everyone
+out.
+
+One shared key means no per-user audit trail. That is a deliberate limit — the UI is built for a
+few trusted editors, and anything more needs real accounts.
+
 ### 4. Configuration via environment variables
 
 | Variable | Default | Description |

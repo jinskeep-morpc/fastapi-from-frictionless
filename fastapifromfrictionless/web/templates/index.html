@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Data{% endblock %}
+{% block body %}
+<h1>Resources</h1>
+<div class="grid">
+  {% for slug, r in resources.items() %}
+  <a class="card" href="{{ prefix }}/{{ slug }}">
+    <b>{{ r.label }}</b>
+    <span>{{ "{:,}".format(counts[slug]) }} record{{ "" if counts[slug] == 1 else "s" }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}
