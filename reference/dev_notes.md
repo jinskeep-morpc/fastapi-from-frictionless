@@ -1,3 +1,24 @@
+# 2026-09-16 — container build could not produce the UI (#148)
+
+The UI shipped in 0.5.0 was unreachable through the one path most people deploy with: the
+Dockerfile called `cli generate` with no `--with-ui`, so an image built from the published
+package contained no `ui.py`. The only way to run it in a container was to mount locally
+generated files over the image, which defeats a build that generates from schemas.
+
+Added `WITH_UI` and `SKIP_UI` build args, plumbed through compose, and passed
+`UI_PROXY_IDENTITY_HEADER` into the api service so the proxy-identity option is configurable on
+a deployed stack rather than only in a local process.
+
+The catch worth remembering is that generation happens in stage 1 of the build, so these are
+build-time, not runtime: setting `WITH_UI` and restarting does nothing, it needs
+`docker compose build api`. Same shape as a schema change, and now stated next to that note in
+the README.
+
+Verified both directions, since an opt-in that is not actually opt-in is its own bug: with
+`WITH_UI=true` the image contains `ui.py`, serves `/ui` with no mounts, honours
+`SKIP_UI=reading`, and leaves the API's 403 intact; with it unset the image is byte-for-byte the
+old shape - no `ui.py`, no mount in `app.py`.
+
 # 2026-09-16 — generated HTMX CRUD UI (#145)
 
 Generated apps were JSON-only, so editing a record meant curl, Swagger, or an Excel round trip.
