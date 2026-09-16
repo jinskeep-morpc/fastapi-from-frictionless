@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ res.label }} — {{ pk }}{% endblock %}
+{% block body %}
+<p class="muted"><a href="{{ prefix }}/{{ slug }}">&larr; {{ res.label }}</a></p>
+<h1>{{ pk }}</h1>
+
+<dl class="detail">
+  {% for f in res.fields %}
+    {% set v = row|attr(f.name) %}
+    <dt>{{ f.name }}</dt>
+    <dd>
+      {% if v is none %}<span class="muted">—</span>
+      {% elif links.get((pk, f.name)) %}
+        <a href="{{ prefix }}/{{ links[(pk, f.name)] }}">{{ v }}</a>
+      {% elif f.name in geo %}
+        <span class="muted">{{ "%.6f"|format(geo[f.name].lat) }}, {{ "%.6f"|format(geo[f.name].lon) }}</span>
+      {% else %}{{ v }}{% endif %}
+    </dd>
+  {% endfor %}
+</dl>
+
+{% for name, point in geo.items() %}
+<div class="mapwrap">
+  <div class="map" id="map-{{ name }}" data-lat="{{ point.lat }}" data-lon="{{ point.lon }}"></div>
+</div>
+{% endfor %}
+
+<div class="actions">
+  <a class="btn primary" href="{{ prefix }}/{{ slug }}/{{ pk }}/edit">Edit</a>
+  <button class="btn danger"
+          hx-delete="{{ prefix }}/{{ slug }}/{{ pk }}"
+          hx-confirm="Delete this {{ res.label|lower }}? This cannot be undone."
+          hx-target="#delete-error" hx-swap="innerHTML">Delete</button>
+</div>
+<div id="delete-error"></div>
+
+{% for rel in related %}
+  {% if rel.total %}
+  <h2>{{ rel.label }} <span class="muted" style="font-weight:400;font-size:.7em">{{ rel.total }}</span></h2>
+  <table>
+    <thead><tr>{% for f in rel.res.fields[:5] %}<th>{{ f.name }}</th>{% endfor %}<th></th></tr></thead>
+    <tbody>
+    {% for r in rel.rows %}
+      {% set rpk = pk_of(r, rel.res) %}
+      <tr>
+        {% for f in rel.res.fields[:5] %}
+          {% set rv = r|attr(f.name) %}
+          <td title="{{ rv if rv is not none else '' }}">{{ "" if rv is none else rv }}</td>
+        {% endfor %}
+        <td><a class="btn" href="{{ prefix }}/{{ rel.slug }}/{{ rpk }}">View</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if rel.more %}
+    <p class="muted"><a href="{{ prefix }}/{{ rel.slug }}?q={{ pk|urlencode }}">and {{ rel.more }} more…</a></p>
+  {% endif %}
+  {% endif %}
+{% endfor %}
+{% endblock %}

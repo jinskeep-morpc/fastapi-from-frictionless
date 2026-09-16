@@ -62,8 +62,27 @@
   th a.sort:hover { color:var(--fg); }
   th a.sort.on { color:var(--fg); }
   th a.sort span { font-size:.75em; margin-left:.25em; }
-  @media (max-width:640px) { th,td { max-width:12ch; } }
+  dl.detail { display:grid; grid-template-columns:minmax(120px,200px) 1fr; gap:.1rem .9rem;
+              margin:0 0 1.4rem; }
+  dl.detail dt { color:var(--muted); font-size:.85rem; padding:.35rem 0;
+                 border-bottom:1px solid var(--line); }
+  dl.detail dd { margin:0; padding:.35rem 0; border-bottom:1px solid var(--line);
+                 overflow-wrap:anywhere; }
+  .mapwrap { margin:0 0 1.4rem; }
+  .map { height:260px; border:1px solid var(--line); border-radius:8px; }
+  h2 { font-size:1rem; margin:1.6rem 0 .6rem; }
+  @media (max-width:640px) {
+    th,td { max-width:12ch; }
+    dl.detail { grid-template-columns:1fr; gap:0; }
+    dl.detail dt { border-bottom:0; padding-bottom:0; }
+  }
 </style>
+{% if geo is defined and geo %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
+      crossorigin="anonymous" referrerpolicy="no-referrer">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+{% endif %}
 </head>
 <body>
 <header>
@@ -79,5 +98,19 @@
   </span>
 </header>
 <main>{% block body %}{% endblock %}</main>
+{% if geo is defined and geo %}
+<script>
+  // Tiles come from OpenStreetMap unless the deployment points elsewhere.
+  document.querySelectorAll('.map').forEach(function (el) {
+    var lat = parseFloat(el.dataset.lat), lon = parseFloat(el.dataset.lon);
+    if (isNaN(lat) || isNaN(lon)) return;
+    var map = L.map(el).setView([lat, lon], 16);
+    L.tileLayer({{ map_tile_url|tojson }}, {
+      maxZoom: 19, attribution: {{ map_attribution|tojson }}
+    }).addTo(map);
+    L.marker([lat, lon]).addTo(map);
+  });
+</script>
+{% endif %}
 </body>
 </html>
