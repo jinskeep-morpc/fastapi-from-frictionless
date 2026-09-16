@@ -526,12 +526,20 @@ def test_map_assets_only_load_where_there_is_geometry(rel_ui):
 # ---------------------------------------------------------------------------
 
 
-def test_forward_references_are_shown_as_cards(rel_ui):
-    """A link on the value says a record exists but nothing about it."""
+def test_forward_references_show_every_field(rel_ui):
+    """A link on the value says a record exists but nothing about it, and a
+    three-field summary still makes you navigate for the rest."""
     body = rel_ui.get("/ui/item/widget-1").text
-    assert "References" in body
-    assert "Owner &middot; owner_handle" in body
-    assert "handle: acme" in body  # a detail of the referenced record, not just its key
+    section = body.split("<h2>Owner", 1)[1].split("Open this owner", 1)[0]
+    for field in ("id", "handle"):
+        assert f"<dt>{field}</dt>" in section
+    assert "acme" in section
+    assert "via owner_handle" in body
+
+
+def test_forward_reference_links_to_the_record(rel_ui):
+    body = rel_ui.get("/ui/item/widget-1").text
+    assert "/ui/owner/7" in body
 
 
 def test_empty_reverse_relationship_still_appears(rel_ui):

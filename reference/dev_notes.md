@@ -1,3 +1,15 @@
+# 2026-09-16 — references show every field
+
+The forward reference cards showed three fields, which meant opening the referenced record
+anyway for anything else — the summary saved a click only when you happened to want one of the
+three. They now render as a full section, every field as a definition list, with a link through.
+
+That immediately exposed a leak: a referenced location rendered its geometry as raw WKB hex,
+`0101000020e610...`, because the coordinate parsing only ran for the record's own fields. Forward
+references now get the same treatment and show coordinates. Worth remembering that any value
+rendered in a new place needs the same formatting the original place gave it — the binary was
+invisible while only three fields showed.
+
 # 2026-09-16 — breadcrumbs and preserved list state (#163)
 
 Only the detail page had any back-navigation, a lone `← Resource` link. The edit and create

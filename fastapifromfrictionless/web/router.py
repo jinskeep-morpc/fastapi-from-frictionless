@@ -518,6 +518,9 @@ def _forward(row, res: dict, resources: dict, slug_of_table: dict, session: Sess
                 "res": target,
                 "row": target_row,
                 "pk": _pk_of(target_row, target),
+                # Same treatment as the record's own fields: a geometry column
+                # renders as coordinates, never as the raw binary.
+                "geo": _geo_points(target_row, target, session),
             }
         )
     return out

@@ -193,8 +193,9 @@ A list row opens a **read-only detail page** showing every field, any records th
 and — for a `geopoint` field — a small map. Edit and delete both live there, so deleting takes a
 deliberate navigation rather than a stray click on a row you were scanning.
 
-The detail page shows related records **both ways**: a card per foreign key summarising the
-record this one points at, and a table per reverse relationship for the records pointing back.
+The detail page shows related records **both ways**: a full section per foreign key showing every
+field of the record this one points at, and a table per reverse relationship for the records
+pointing back.
 Reverse sections stay visible when empty, so an absent one means "no such relationship" rather
 than "none yet", and there is somewhere to start from when adding the first.
 
