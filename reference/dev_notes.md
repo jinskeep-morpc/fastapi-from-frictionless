@@ -1,3 +1,24 @@
+# 2026-09-16 — both link directions on detail pages (#158)
+
+Detail pages treated the two directions inconsistently. Reverse relationships got a section, but
+only when non-empty, so a deployment with no notes showed nothing and there was no way to tell
+the relationship existed. Forward references were only a hyperlink on the field value, which
+tells you a sensor exists but nothing about it.
+
+Now: a card per foreign key summarising the referenced record, and a reverse section that stays
+visible when empty with a link to add the first one. Edit and Delete moved onto the title line,
+right aligned, where they are visible without scrolling past a long field list.
+
+Also encoded primary keys in links. A location key is a street address, so hrefs carried raw
+spaces — browsers cope, but nothing else parsing the markup does, and it made every automated
+check of those links fail in a way that looked like a routing bug. `~` stays unreserved, so
+composite keys survive encoding.
+
+Worth noting the near-miss: the reference cards looked empty when I first checked them, and I
+almost went debugging the template. The fields were rendering — a `sed` range in my own check
+had truncated the output. The lesson is the same one as the `isinstance` guard earlier: verify
+what the tool is actually showing before believing a negative result.
+
 # 2026-09-16 — detail pages, click-through and maps (#153, #154, #155)
 
 A list row now opens a read-only detail page rather than an edit form. Edit and delete moved

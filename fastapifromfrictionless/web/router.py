@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -260,6 +261,7 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
                 row=row,
                 pk=pk,
                 links=_fk_links([row], res, resources, slug_of_table, session),
+                forward=_forward(row, res, resources, slug_of_table, session),
                 related=_related(row, res, resources, slug_of_table, session),
                 geo=_geo_points(row, res, session),
                 pk_of=_pk_of,
@@ -403,10 +405,47 @@ def _fk_links(rows, res: dict, resources: dict, slug_of_table: dict, session: Se
                 continue
             key = (_pk_of(row, res), field["name"])
             if value in resolved:
-                links[key] = f"{target_slug}/{resolved[value]}"
+                links[key] = f"{target_slug}/{quote(resolved[value], safe='~')}"
             else:
-                links[key] = f"{target_slug}?q={value}"
+                links[key] = f"{target_slug}?q={quote(str(value))}"
     return links
+
+
+def _forward(row, res: dict, resources: dict, slug_of_table: dict, session: Session) -> list:
+    """The records this one points at, one per foreign key.
+
+    A link on the field value tells you a sensor exists but nothing about it.
+    Fetching the referenced row lets the page show its details in place.
+    """
+    out = []
+    for field in res["fields"]:
+        target_spec = field.get("fk")
+        if not target_spec:
+            continue
+        value = getattr(row, field["name"])
+        if value is None:
+            continue
+        table_name, column = target_spec.split(".")
+        target_slug = slug_of_table.get(table_name)
+        if target_slug is None:
+            continue  # excluded by --skip-ui
+        target = resources[target_slug]
+        target_row = session.exec(
+            select(target["table"]).where(getattr(target["table"], column) == value)
+        ).first()
+        if target_row is None:
+            continue
+        out.append(
+            {
+                "field": field["name"],
+                "slug": target_slug,
+                "label": target["label"],
+                "res": target,
+                "row": target_row,
+                "pk": _pk_of(target_row, target),
+            }
+        )
+    return out
 
 
 def _related(row, res: dict, resources: dict, slug_of_table: dict, session: Session) -> list:
@@ -426,6 +465,8 @@ def _related(row, res: dict, resources: dict, slug_of_table: dict, session: Sess
         if target_slug is None:
             continue
         items = list(getattr(row, name) or [])
+        # Reported even when empty: a missing section reads as "no such
+        # relationship" rather than "none yet", and hides where to add one.
         out.append(
             {
                 "name": name,

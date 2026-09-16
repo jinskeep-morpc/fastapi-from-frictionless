@@ -37,7 +37,7 @@
         </td>
       {% endfor %}
       <td style="white-space:nowrap">
-        <a class="btn" href="{{ prefix }}/{{ slug }}/{{ rowpk }}">View</a>
+        <a class="btn" href="{{ prefix }}/{{ slug }}/{{ rowpk|urlencode }}">View</a>
       </td>
     </tr>
   {% endfor %}
