@@ -1,0 +1,65 @@
+{# Rendered alone for htmx requests so typing narrows the list without a reload. #}
+{% macro qs(overrides) -%}
+  {%- set args = {'q': q, 'sort': sort, 'dir': dir, 'page': page} -%}
+  {%- set _ = args.update(overrides) -%}
+  {%- for k, v in args.items() if v not in (None, '', 1) or (k == 'page' and v != 1) -%}
+    {{ '&' if not loop.first }}{{ k }}={{ v | urlencode }}
+  {%- endfor -%}
+{%- endmacro %}
+<div id="table-wrap">
+{% if rows %}
+<table>
+  <thead><tr>
+    {% for f in res.fields %}
+      {% set is_sorted = (sort == f.name) %}
+      {% set next_dir = 'desc' if (is_sorted and dir == 'asc') else 'asc' %}
+      <th>
+        <a class="sort {{ 'on' if is_sorted }}"
+           href="{{ prefix }}/{{ slug }}?{{ qs({'sort': f.name, 'dir': next_dir, 'page': 1}) }}"
+           hx-get="{{ prefix }}/{{ slug }}?{{ qs({'sort': f.name, 'dir': next_dir, 'page': 1}) }}"
+           hx-target="#table-wrap" hx-swap="outerHTML" hx-push-url="true">
+          {{ f.name }}{% if is_sorted %}<span aria-hidden="true">{{ '▲' if dir == 'asc' else '▼' }}</span>{% endif %}
+        </a>
+      </th>
+    {% endfor %}
+    <th></th>
+  </tr></thead>
+  <tbody>
+  {% for row in rows %}
+    {% set rowpk = pk_of(row, res) %}
+    <tr id="row-{{ loop.index }}">
+      {% for f in res.fields %}
+        {% set v = row[f.name] if row is mapping else row|attr(f.name) %}
+        <td title="{{ v if v is not none else '' }}">{{ "" if v is none else v }}</td>
+      {% endfor %}
+      <td style="white-space:nowrap">
+        <a class="btn" href="{{ prefix }}/{{ slug }}/{{ rowpk }}/edit">Edit</a>
+        <button class="btn danger"
+                hx-delete="{{ prefix }}/{{ slug }}/{{ rowpk }}"
+                hx-target="#row-{{ loop.index }}"
+                hx-swap="outerHTML"
+                hx-confirm="Delete this {{ res.label|lower }}? This cannot be undone.">Delete</button>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if pages > 1 %}
+<div class="pager">
+  {% if page > 1 %}
+    <a class="btn" href="{{ prefix }}/{{ slug }}?{{ qs({'page': page - 1}) }}"
+       hx-get="{{ prefix }}/{{ slug }}?{{ qs({'page': page - 1}) }}"
+       hx-target="#table-wrap" hx-swap="outerHTML" hx-push-url="true">Previous</a>
+  {% endif %}
+  <span class="muted">Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}
+    <a class="btn" href="{{ prefix }}/{{ slug }}?{{ qs({'page': page + 1}) }}"
+       hx-get="{{ prefix }}/{{ slug }}?{{ qs({'page': page + 1}) }}"
+       hx-target="#table-wrap" hx-swap="outerHTML" hx-push-url="true">Next</a>
+  {% endif %}
+</div>
+{% endif %}
+{% else %}
+<p class="muted">{{ "No records match “" ~ q ~ "”." if q else "No records yet." }}</p>
+{% endif %}
+</div>

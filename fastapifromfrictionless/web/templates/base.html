@@ -55,6 +55,13 @@
   .muted { color:var(--muted); }
   .actions { display:flex; gap:.5rem; margin-top:1.2rem; align-items:center; }
   .pager { display:flex; gap:.5rem; align-items:center; margin-top:1rem; }
+  .toolbar { display:flex; gap:.6rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
+  .search { flex:1 1 220px; max-width:340px; padding:.4rem .55rem; border:1px solid var(--line);
+            border-radius:6px; background:var(--bg); color:var(--fg); font:inherit; }
+  th a.sort { color:var(--muted); text-decoration:none; display:inline-block; }
+  th a.sort:hover { color:var(--fg); }
+  th a.sort.on { color:var(--fg); }
+  th a.sort span { font-size:.75em; margin-left:.25em; }
   @media (max-width:640px) { th,td { max-width:12ch; } }
 </style>
 </head>

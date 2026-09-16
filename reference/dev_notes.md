@@ -1,3 +1,29 @@
+# 2026-09-16 — filtering and ordering in UI lists (#151)
+
+List views showed rows in whatever order the database returned, 50 at a time, with no search.
+Now: a case-insensitive search box matching every column cast to text, sortable headers, and
+both surviving pagination. HTMX swaps the table alone, which meant splitting it into
+`_table.html` and picking the template by the `HX-Request` header.
+
+The sort column is interpolated into the query, so it is checked against the resource's declared
+fields and ignored otherwise. Tested with `rank; DROP TABLE thing` and `__class__` alongside a
+plain unknown name.
+
+Page clamping matters more than it looks: filtering while on page 5 would otherwise land on an
+empty page, which reads as "no results" for a filter that matched three rows.
+
+Two test-harness traps cost more time than the feature:
+
+`create_engine("sqlite://")` gives each connection its own empty database, so the fixture's rows
+were invisible to the app's sessions — `StaticPool` is required to share one.
+
+Defining the SQLModel table inside the fixture re-registers the class on every test, and
+SQLModel's registry is global: the file passed alone and the full suite raised
+`InvalidRequestError`. The table class now lives at module scope with a distinctive name, since
+other tests exec generated modules that define their own. Same global-registry problem as the
+table-name collision in the #138 tests; worth assuming any new exec- or model-based test will hit
+it.
+
 # 2026-09-16 — container build could not produce the UI (#148)
 
 The UI shipped in 0.5.0 was unreachable through the one path most people deploy with: the

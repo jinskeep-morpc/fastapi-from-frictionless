@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import String, cast, or_
 from sqlmodel import Session, func, select
 
 from .auth import COOKIE_NAME, auth_disabled, expected_key, identify, proxy_identity_header
@@ -135,29 +136,56 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
 
     @router.get("/{slug}", response_class=HTMLResponse)
     def list_rows(
-        request: Request, slug: str, page: int = 1, session: Session = Depends(get_session)
+        request: Request,
+        slug: str,
+        page: int = 1,
+        q: str = "",
+        sort: str = "",
+        dir: str = "asc",
+        session: Session = Depends(get_session),
     ):
         guard(request)
         res = _resource(slug)
         page = max(page, 1)
-        total = session.exec(select(func.count()).select_from(res["table"])).one()
-        rows = session.exec(
-            select(res["table"]).offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE)
-        ).all()
-        return TEMPLATES.TemplateResponse(
+        q = q.strip()
+
+        statement = select(res["table"])
+        count_statement = select(func.count()).select_from(res["table"])
+        if q:
+            clause = _search_clause(res, q)
+            statement = statement.where(clause)
+            count_statement = count_statement.where(clause)
+
+        # Only a column this resource actually declares may be sorted on;
+        # anything else is ignored rather than interpolated into the query.
+        names = {f["name"] for f in res["fields"]}
+        sort = sort if sort in names else ""
+        descending = dir == "desc"
+        if sort:
+            column = getattr(res["table"], sort)
+            statement = statement.order_by(column.desc() if descending else column.asc())
+
+        total = session.exec(count_statement).one()
+        pages = max((total + PAGE_SIZE - 1) // PAGE_SIZE, 1)
+        page = min(page, pages)
+        rows = session.exec(statement.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE)).all()
+
+        context = ctx(
             request,
-            "list.html",
-            ctx(
-                request,
-                slug=slug,
-                res=res,
-                rows=rows,
-                total=total,
-                page=page,
-                pages=max((total + PAGE_SIZE - 1) // PAGE_SIZE, 1),
-                pk_of=_pk_of,
-            ),
+            slug=slug,
+            res=res,
+            rows=rows,
+            total=total,
+            page=page,
+            pages=pages,
+            q=q,
+            sort=sort,
+            dir="desc" if descending else "asc",
+            pk_of=_pk_of,
         )
+        # htmx asks for the table alone so typing narrows the list in place.
+        template = "_table.html" if request.headers.get("HX-Request") else "list.html"
+        return TEMPLATES.TemplateResponse(request, template, context)
 
     @router.get("/{slug}/new", response_class=HTMLResponse)
     def new_form(request: Request, slug: str, session: Session = Depends(get_session)):
@@ -281,6 +309,19 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
         return HTMLResponse("")  # htmx swaps the row away
 
     return router
+
+
+def _search_clause(res: dict, q: str):
+    """Case-insensitive match of ``q`` against every column, as text.
+
+    Columns are cast so a search hits numbers and dates too. ``ilike`` is native
+    on PostgreSQL and compiles to ``lower(x) LIKE lower(y)`` on SQLite, so this
+    behaves the same on both.
+    """
+    pattern = f"%{q}%"
+    return or_(
+        *[cast(getattr(res["table"], f["name"]), String).ilike(pattern) for f in res["fields"]]
+    )
 
 
 def _fk_options(res: dict, resources: dict, session: Session) -> dict:
