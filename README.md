@@ -147,6 +147,25 @@ For each schema resource, the generated app exposes the following endpoints (rep
 | `GET` | `/excel/export` | Download all data as `.xlsx` |
 | `POST` | `/excel/import` | Upload and sync an `.xlsx` workbook |
 
+#### Related objects in responses
+
+`GET` endpoints return a `*PublicWithAll` model that embeds related records. Cardinality follows
+the foreign key: the schema that **owns** the FK gets a single object, the referenced schema gets
+a list.
+
+Given `deployment.sensor_name` referencing `sensor.name`:
+
+```jsonc
+// GET /deployment/all
+{ "name": "DEP_001", "sensor": { "name": "MORPC_001", ... }, "readings": [ ... ] }
+
+// GET /sensor/all
+{ "name": "MORPC_001", "deployments": [ { "name": "DEP_001", ... } ] }
+```
+
+The singular key (`sensor`) is the many-to-one side and is `null` when the FK is unset; plural
+keys are always lists.
+
 ### 4. Configuration via environment variables
 
 | Variable | Default | Description |
