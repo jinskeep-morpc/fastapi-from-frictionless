@@ -656,3 +656,70 @@ def test_a_normal_key_is_still_editable(rel_ui):
     body = rel_ui.get("/ui/owner/new").text
     field = body.split('id="id"', 1)[1].split(">", 1)[0]
     assert "readonly" not in field
+
+
+# ---------------------------------------------------------------------------
+# Breadcrumbs and preserved list state (#163)
+# ---------------------------------------------------------------------------
+
+
+def _crumb_text(html):
+    """Labels in the breadcrumb nav, in order."""
+    import re
+
+    nav = html.split('class="crumbs"', 1)[1].split("</nav>", 1)[0]
+    return [t.strip() for t in re.findall(r">([^<>]+)<", nav) if t.strip() and t.strip() != "/"]
+
+
+def test_index_has_a_single_crumb(rel_ui):
+    assert _crumb_text(rel_ui.get("/ui/").text) == ["Data"]
+
+
+def test_list_crumbs(rel_ui):
+    assert _crumb_text(rel_ui.get("/ui/item").text) == ["Data", "Item"]
+
+
+def test_detail_crumbs(rel_ui):
+    assert _crumb_text(rel_ui.get("/ui/item/widget-1").text) == ["Data", "Item", "widget-1"]
+
+
+def test_edit_crumbs(rel_ui):
+    assert _crumb_text(rel_ui.get("/ui/item/widget-1/edit").text) == [
+        "Data",
+        "Item",
+        "widget-1",
+        "Edit",
+    ]
+
+
+def test_new_crumbs(rel_ui):
+    assert _crumb_text(rel_ui.get("/ui/item/new").text) == ["Data", "Item", "New"]
+
+
+def test_crumbs_reflect_position_not_history(rel_ui):
+    """Arriving at an owner by clicking through from an item still shows where
+    you are, not how you got there - the browser's back button covers that, and
+    a trail would break on a shared link."""
+    assert _crumb_text(rel_ui.get("/ui/owner/7").text) == ["Data", "Owner", "7"]
+
+
+def test_view_link_carries_the_list_query(rel_ui):
+    body = rel_ui.get("/ui/item?q=widget&sort=code&dir=desc").text
+    assert "from=q%3Dwidget%26sort%3Dcode%26dir%3Ddesc" in body
+
+
+def test_unfiltered_list_adds_no_from_parameter(rel_ui):
+    body = rel_ui.get("/ui/item").text
+    assert 'href="/ui/item/widget-1"' in body
+    assert "from=" not in body
+
+
+def test_detail_crumb_returns_to_the_filtered_list(rel_ui):
+    body = rel_ui.get("/ui/item/widget-1", params={"from": "q=widget&sort=code"}).text
+    nav = body.split('class="crumbs"', 1)[1].split("</nav>", 1)[0]
+    assert "/ui/item?q=widget&amp;sort=code" in nav
+
+
+def test_the_last_crumb_is_not_a_link(rel_ui):
+    nav = rel_ui.get("/ui/item/widget-1").text.split('class="crumbs"', 1)[1].split("</nav>", 1)[0]
+    assert 'aria-current="page">widget-1' in nav

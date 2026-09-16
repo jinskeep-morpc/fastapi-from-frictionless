@@ -184,6 +184,11 @@ build step, no JavaScript toolchain.
 `--skip-ui` omits resources. A table with tens of millions of rows should not get a browse page,
 and its count queries would be slow enough to notice.
 
+Every page carries breadcrumbs — `Data / Deployment / MORPC_051_00 / Edit` — derived from the
+URL rather than from history, so they stay correct however the page was reached, including from
+a bookmark. Opening a record keeps the list you left: filter and sort a list, open a row, and the
+resource crumb returns to that same filtered page.
+
 A list row opens a **read-only detail page** showing every field, any records that point at it,
 and — for a `geopoint` field — a small map. Edit and delete both live there, so deleting takes a
 deliberate navigation rather than a stray click on a row you were scanning.
