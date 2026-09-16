@@ -2,7 +2,17 @@
 {% block title %}{{ res.label }} — {{ pk }}{% endblock %}
 {% block body %}
 <p class="muted"><a href="{{ prefix }}/{{ slug }}">&larr; {{ res.label }}</a></p>
-<h1>{{ pk }}</h1>
+<div class="titlebar">
+  <h1>{{ pk }}</h1>
+  <div class="titleactions">
+    <a class="btn primary" href="{{ prefix }}/{{ slug }}/{{ pk|urlencode }}/edit">Edit</a>
+    <button class="btn danger"
+            hx-delete="{{ prefix }}/{{ slug }}/{{ pk|urlencode }}"
+            hx-confirm="Delete this {{ res.label|lower }}? This cannot be undone."
+            hx-target="#delete-error" hx-swap="innerHTML">Delete</button>
+  </div>
+</div>
+<div id="delete-error"></div>
 
 <dl class="detail">
   {% for f in res.fields %}
@@ -25,18 +35,29 @@
 </div>
 {% endfor %}
 
-<div class="actions">
-  <a class="btn primary" href="{{ prefix }}/{{ slug }}/{{ pk }}/edit">Edit</a>
-  <button class="btn danger"
-          hx-delete="{{ prefix }}/{{ slug }}/{{ pk }}"
-          hx-confirm="Delete this {{ res.label|lower }}? This cannot be undone."
-          hx-target="#delete-error" hx-swap="innerHTML">Delete</button>
+{% if forward %}
+<h2>References</h2>
+<div class="grid">
+  {% for fwd in forward %}
+  <a class="card" href="{{ prefix }}/{{ fwd.slug }}/{{ fwd.pk|urlencode }}">
+    <span>{{ fwd.label }} &middot; {{ fwd.field }}</span>
+    <b>{{ fwd.pk }}</b>
+    {% for f in fwd.res.fields[:3] %}
+      {% set fv = fwd.row|attr(f.name) %}
+      {% if fv is not none and f.name not in fwd.res.pk %}
+        <span>{{ f.name }}: {{ fv }}</span>
+      {% endif %}
+    {% endfor %}
+  </a>
+  {% endfor %}
 </div>
-<div id="delete-error"></div>
+{% endif %}
 
 {% for rel in related %}
-  {% if rel.total %}
   <h2>{{ rel.label }} <span class="muted" style="font-weight:400;font-size:.7em">{{ rel.total }}</span></h2>
+  {% if not rel.total %}
+    <p class="muted">None yet. <a href="{{ prefix }}/{{ rel.slug }}/new">Add one</a>.</p>
+  {% else %}
   <table>
     <thead><tr>{% for f in rel.res.fields[:5] %}<th>{{ f.name }}</th>{% endfor %}<th></th></tr></thead>
     <tbody>
@@ -47,7 +68,7 @@
           {% set rv = r|attr(f.name) %}
           <td title="{{ rv if rv is not none else '' }}">{{ "" if rv is none else rv }}</td>
         {% endfor %}
-        <td><a class="btn" href="{{ prefix }}/{{ rel.slug }}/{{ rpk }}">View</a></td>
+        <td><a class="btn" href="{{ prefix }}/{{ rel.slug }}/{{ rpk|urlencode }}">View</a></td>
       </tr>
     {% endfor %}
     </tbody>

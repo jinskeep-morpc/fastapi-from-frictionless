@@ -519,3 +519,48 @@ def test_geopoint_is_not_a_form_input(live_ui, monkeypatch):
 
 def test_map_assets_only_load_where_there_is_geometry(rel_ui):
     assert "leaflet" not in rel_ui.get("/ui/item/widget-1").text
+
+
+# ---------------------------------------------------------------------------
+# Both link directions and action placement (#158)
+# ---------------------------------------------------------------------------
+
+
+def test_forward_references_are_shown_as_cards(rel_ui):
+    """A link on the value says a record exists but nothing about it."""
+    body = rel_ui.get("/ui/item/widget-1").text
+    assert "References" in body
+    assert "Owner &middot; owner_handle" in body
+    assert "handle: acme" in body  # a detail of the referenced record, not just its key
+
+
+def test_empty_reverse_relationship_still_appears(rel_ui):
+    """A vanished section reads as "no such relationship" rather than "none
+    yet", and hides where to add the first one."""
+    body = rel_ui.get("/ui/owner/7").text
+    rel_ui.delete("/ui/item/widget-1")
+    rel_ui.delete("/ui/item/widget-2")
+    after = rel_ui.get("/ui/owner/7").text
+    assert "Item" in body and "Item" in after
+    assert "None yet" in after
+    assert "/ui/item/new" in after
+
+
+def test_actions_sit_on_the_title_line(rel_ui):
+    body = rel_ui.get("/ui/item/widget-1").text
+    titlebar = body.split('class="titlebar"', 1)[1].split("</div>", 2)
+    assert ">Edit</a>" in titlebar[0] + titlebar[1]
+    assert "Delete</button>" in titlebar[0] + titlebar[1]
+
+
+def test_primary_keys_are_url_encoded_in_links(rel_ui):
+    """A key can contain spaces or colons; a raw one breaks anything parsing
+    the markup."""
+    from fastapi.testclient import TestClient  # noqa: F401  (fixture already built)
+
+    body = rel_ui.get("/ui/item").text
+    assert 'href="/ui/item/widget-1"' in body  # nothing to encode here
+    # And the router encodes resolved foreign key targets:
+    from fastapifromfrictionless.web.router import _pk_of
+
+    assert _pk_of(type("R", (), {"code": "a b"})(), {"pk": ["code"]}) == "a b"

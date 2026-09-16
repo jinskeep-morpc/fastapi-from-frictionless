@@ -45,7 +45,8 @@
   .card { border:1px solid var(--line); border-radius:8px; padding:.9rem; text-decoration:none;
           color:var(--fg); display:block; }
   .card b { display:block; }
-  .card span { color:var(--muted); font-size:.85rem; }
+  .card span { color:var(--muted); font-size:.85rem; display:block; }
+  .card b { margin:.1rem 0 .3rem; }
   label { display:block; margin:.8rem 0 .2rem; font-size:.85rem; color:var(--muted); }
   input[type=text], input[type=number], input[type=date], input[type=datetime-local], select {
     width:100%; padding:.45rem .55rem; border:1px solid var(--line); border-radius:6px;
@@ -68,12 +69,16 @@
                  border-bottom:1px solid var(--line); }
   dl.detail dd { margin:0; padding:.35rem 0; border-bottom:1px solid var(--line);
                  overflow-wrap:anywhere; }
+  .titlebar { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+  .titlebar h1 { margin:0; }
+  .titleactions { margin-left:auto; display:flex; gap:.5rem; }
   .mapwrap { margin:0 0 1.4rem; }
   .map { height:260px; border:1px solid var(--line); border-radius:8px; }
   h2 { font-size:1rem; margin:1.6rem 0 .6rem; }
   @media (max-width:640px) {
     th,td { max-width:12ch; }
     dl.detail { grid-template-columns:1fr; gap:0; }
+    .titleactions { margin-left:0; }
     dl.detail dt { border-bottom:0; padding-bottom:0; }
   }
 </style>
