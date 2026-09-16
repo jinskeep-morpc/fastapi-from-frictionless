@@ -1,0 +1,35 @@
+# ui.py
+#
+# Wiring for the browser CRUD UI. Deliberately thin: the descriptor below
+# describes each resource, and the router, views and templates come from
+# fastapifromfrictionless.web so they can be fixed without regenerating.
+from fastapifromfrictionless.web import build_ui_app
+
+from .database import engine
+from .models import *
+from sqlmodel import Session
+
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+
+RESOURCES = {
+<% for r in resources %>
+    "<< r.slug >>": {
+        "label": "<< r.label >>",
+        "pk": << r.pk >>,
+        "table": << r.name >>,
+        "create": << r.name >>Create,
+        "update": << r.name >>Update,
+        "fields": [
+<% for f in r.fields %>
+            {"name": "<< f.name >>", "type": "<< f.type >>", "required": << f.required >>, "fk": << ('"' ~ f.fk ~ '"') if f.fk else "None" >>},
+<% endfor %>
+        ],
+    },
+<% endfor %>
+}
+
+ui_app = build_ui_app(RESOURCES, get_session)
