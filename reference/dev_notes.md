@@ -1,3 +1,30 @@
+# 2026-09-16 — relationship cardinality (#138)
+
+Every relationship was emitted as a list on both sides. The side that *owns* the foreign key is
+many-to-one, so SQLAlchemy handed back a single object where the response model declared a list.
+Pydantic then iterated it, and iterating a SQLModel instance yields `(key, value)` tuples, so
+`/deployment/all` died with `ResponseValidationError: ... Input should be a valid dictionary`,
+listing inputs like `('created_at', datetime(...))`.
+
+The fix is in the template, not the generator logic: `fk_models` (this schema owns the FK) now
+emits `Optional['X']` with a singular attribute name, while `relationships` (other schemas point
+here) keeps the list. The `back_populates` on the list side loses its trailing `s` to name the
+new scalar attribute.
+
+Two things worth remembering. First, it hid because an empty relationship serializes fine as an
+empty list — a smoke test against a fresh database passes, and it only breaks once a related row
+exists. Second, the whole suite stayed green when I made the change, because nothing asserted
+cardinality at all; the tests covered names and presence, never shape.
+
+The new mapper test calls `configure_mappers()`, which is the only thing that validates
+`back_populates` pairs — a mismatched pair is silent until SQLAlchemy configures. It needed
+distinct table names (`station`/`install`) because SQLModel's metadata registry is global and the
+other exec-based tests already claim `sensor`/`deployment`; a repeat collides with
+"Table is already defined".
+
+Breaking change: response field names on the many-to-one side lose their plural (`sensors` ->
+`sensor`).
+
 # 2026-09-16 — unique constraint support (#135)
 
 `constraints.unique` was read by nobody: the field loop looked at `required` and the primary

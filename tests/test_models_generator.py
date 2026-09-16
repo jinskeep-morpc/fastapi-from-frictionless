@@ -505,3 +505,96 @@ def test_unique_models_are_importable(unique_folder, tmp_path):
         assert module.Sensor.__table__.columns["status"].unique in (None, False)
     finally:
         sys.modules.pop("generated_unique_models", None)
+
+
+# ---------------------------------------------------------------------------
+# Relationship cardinality (#138)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def cardinality_folder(tmp_path):
+    """station <- install: install owns the FK, so it is the many side."""
+    write_schema(
+        tmp_path,
+        "station",
+        """\
+        fields:
+          - name: macaddr
+            type: string
+            constraints: {required: true}
+          - name: name
+            type: string
+            constraints: {required: true, unique: true}
+        primaryKey:
+          - macaddr
+    """,
+    )
+    write_schema(
+        tmp_path,
+        "install",
+        """\
+        fields:
+          - name: name
+            type: string
+            constraints: {required: true}
+          - name: station_name
+            type: string
+            constraints: {required: true}
+        primaryKey:
+          - name
+        foreignKeys:
+          - fields: [station_name]
+            reference: {resource: station, fields: [name]}
+    """,
+    )
+    return tmp_path
+
+
+def test_fk_owning_side_is_scalar(cardinality_folder, tmp_path):
+    # Regression (#138): the FK side was emitted as list['Station'], so serializing a
+    # populated relationship raised ResponseValidationError.
+    out = tmp_path / "models.py"
+    models(folder_str(cardinality_folder)).build().save(out)
+    text = out.read_text()
+    assert "station: Optional['Station'] = Relationship(back_populates='installs')" in text
+    assert "stations: list['Station']" not in text
+
+
+def test_referenced_side_stays_a_list(cardinality_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(cardinality_folder)).build().save(out)
+    assert (
+        "installs: list['Install'] | None = Relationship(back_populates='station')"
+        in out.read_text()
+    )
+
+
+def test_public_with_all_fk_side_is_scalar(cardinality_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(cardinality_folder)).build().save(out)
+    text = out.read_text()
+    assert "station: Optional['StationPublic'] = None" in text
+    assert "stations: List['StationPublic']" not in text
+
+
+def test_relationship_cardinality_configures_and_matches(cardinality_folder, tmp_path):
+    """back_populates mismatches only surface when SQLAlchemy configures mappers."""
+    import importlib.util
+    import sys
+
+    from sqlalchemy.orm import configure_mappers
+
+    out = tmp_path / "models.py"
+    models(folder_str(cardinality_folder)).build().save(out)
+
+    spec = importlib.util.spec_from_file_location("generated_cardinality_models", out)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["generated_cardinality_models"] = module
+    try:
+        spec.loader.exec_module(module)
+        configure_mappers()
+        assert module.Install.__mapper__.relationships["station"].uselist is False
+        assert module.Station.__mapper__.relationships["installs"].uselist is True
+    finally:
+        sys.modules.pop("generated_cardinality_models", None)
