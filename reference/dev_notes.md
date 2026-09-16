@@ -1,3 +1,32 @@
+# 2026-09-16 — detail pages, click-through and maps (#153, #154, #155)
+
+A list row now opens a read-only detail page rather than an edit form. Edit and delete moved
+there, foreign keys link through to the record they reference, and a geopoint renders as a map.
+
+Related records needed no generator change: SQLModel already declares the relationships on the
+table classes, so the router reads `__mapper__.relationships` at runtime.
+
+Three things went wrong in ways worth keeping:
+
+**`_pk_of` was defined inside `build_ui_app`.** The new module-level helpers called it and the
+whole list view 500'd with `NameError`. Every test passed, because the fixture had no foreign
+keys and the code path never ran — the bug was only reachable with an FK, which the tests did
+not have until I added a second fixture that models one.
+
+**SQLAlchemy returns `Row`, not `tuple`.** An `isinstance(r, tuple)` guard I added defensively
+was always False, so every foreign key silently fell back to the filtered list instead of
+resolving. It looked like a working feature: links rendered, pages loaded, and only the target
+was subtly wrong. A defensive check on an unverified assumption is worse than no check.
+
+**Readonly inputs are submitted.** Rendering geometry readonly meant the browser posted its WKB
+hex straight back, and omitting it failed validation because generated Update models make every
+field required-but-nullable. Geo fields are now absent from forms entirely and supplied by the
+router — None on create, the stored value on update — leaving whatever derives them
+authoritative.
+
+Tiles default to public OpenStreetMap with `UI_MAP_TILE_URL` to override. Leaflet loads only on
+pages that actually have a point.
+
 # 2026-09-16 — filtering and ordering in UI lists (#151)
 
 List views showed rows in whatever order the database returned, 50 at a time, with no search.

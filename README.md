@@ -184,6 +184,23 @@ build step, no JavaScript toolchain.
 `--skip-ui` omits resources. A table with tens of millions of rows should not get a browse page,
 and its count queries would be slow enough to notice.
 
+A list row opens a **read-only detail page** showing every field, any records that point at it,
+and — for a `geopoint` field — a small map. Edit and delete both live there, so deleting takes a
+deliberate navigation rather than a stray click on a row you were scanning.
+
+**Foreign key values link through** to the record they reference. These usually do not point at
+the target's primary key (`deployment.sensor_name` references `sensor.name` while the key is
+`macaddr`), so values are resolved in one query per target table and linked directly; anything
+that does not resolve falls back to the filtered list.
+
+Map tiles come from OpenStreetMap by default. `UI_MAP_TILE_URL` and `UI_MAP_ATTRIBUTION` point
+at another source — your own tile server, or a provider with an API key.
+
+Geometry columns are shown, never edited: they render as a map and coordinates on the detail
+page, and forms leave them out entirely rather than round-tripping a binary value through a text
+box. Populating them is a per-schema concern — a trigger deriving the point from latitude and
+longitude, for instance.
+
 List views can be filtered and sorted. The search box matches case-insensitively across every
 column — values are cast to text, so it finds numbers and dates as well as strings — and column
 headers sort, toggling ascending and descending. Filter, sort and page survive each other, and

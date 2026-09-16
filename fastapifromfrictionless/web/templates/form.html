@@ -15,7 +15,12 @@
     <label for="{{ f.name }}" class="{{ 'req' if f.required else '' }}">
       {{ f.name }}{% if f.fk %} <span class="muted">&rarr; {{ f.fk }}</span>{% endif %}
     </label>
-    {% if f.name in options %}
+    {% if f.type in ("geopoint", "geojson") %}
+      {# No input: geometry is derived, and round-tripping its binary
+         representation through a text box would be meaningless. #}
+      <p class="muted" style="margin:.2rem 0 0;font-size:.85rem">
+        Derived automatically; not editable here.</p>
+    {% elif f.name in options %}
       <select id="{{ f.name }}" name="{{ f.name }}" {{ "disabled" if not editable }}>
         <option value="">{{ "" if f.required else "(none)" }}</option>
         {% for opt in options[f.name] %}

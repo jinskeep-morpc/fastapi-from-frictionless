@@ -3,7 +3,7 @@
 import textwrap
 
 import pytest
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
 from fastapifromfrictionless.uigen import ui
 
@@ -348,3 +348,174 @@ def test_no_match_says_so(live_ui):
     body = live_ui.get("/ui/thing?q=zzzznothing").text
     assert _codes(body) == []
     assert "No records match" in body
+
+
+# ---------------------------------------------------------------------------
+# Detail page, click-through and maps (#153, #154, #155)
+# ---------------------------------------------------------------------------
+
+
+class UiOwner(SQLModel, table=True):
+    __tablename__ = "ui_owner"
+    id: int = Field(primary_key=True)
+    handle: str
+    # Generated models declare these, and _related reads them off the mapper.
+    items: list["UiItem"] = Relationship(back_populates="owner")
+
+
+class UiOwnerCreate(SQLModel):
+    id: int
+    handle: str
+
+
+class UiOwnerUpdate(SQLModel):
+    id: int | None = None
+    handle: str | None = None
+
+
+class UiItem(SQLModel, table=True):
+    __tablename__ = "ui_item"
+    code: str = Field(primary_key=True)
+    owner_handle: str | None = Field(default=None, foreign_key="ui_owner.handle")
+    owner: UiOwner | None = Relationship(back_populates="items")
+
+
+class UiItemCreate(SQLModel):
+    code: str
+    owner_handle: str | None = None
+
+
+class UiItemUpdate(SQLModel):
+    code: str | None = None
+    owner_handle: str | None = None
+
+
+REL_RESOURCES = {
+    "owner": {
+        "label": "Owner",
+        "pk": ["id"],
+        "table": UiOwner,
+        "create": UiOwnerCreate,
+        "update": UiOwnerUpdate,
+        "fields": [
+            {"name": "id", "type": "integer", "required": True, "fk": None},
+            {"name": "handle", "type": "string", "required": True, "fk": None},
+        ],
+    },
+    "item": {
+        "label": "Item",
+        "pk": ["code"],
+        "table": UiItem,
+        "create": UiItemCreate,
+        "update": UiItemUpdate,
+        "fields": [
+            {"name": "code", "type": "string", "required": True, "fk": None},
+            # Points at handle, which is NOT the owner's primary key - the
+            # normal case, and the one a naive link would 404 on.
+            {"name": "owner_handle", "type": "string", "required": False, "fk": "ui_owner.handle"},
+        ],
+    },
+}
+
+
+@pytest.fixture()
+def rel_ui(monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from sqlalchemy.pool import StaticPool
+    from sqlmodel import Session, create_engine
+
+    from fastapifromfrictionless.web import build_ui_app
+
+    monkeypatch.setenv("ALLOW_NO_AUTH", "true")
+    monkeypatch.delenv("API_KEY", raising=False)
+    monkeypatch.delenv("UI_PROXY_IDENTITY_HEADER", raising=False)
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    UiOwner.__table__.create(engine)
+    UiItem.__table__.create(engine)
+    with Session(engine) as s:
+        s.add(UiOwner(id=7, handle="acme"))
+        s.add(UiItem(code="widget-1", owner_handle="acme"))
+        s.add(UiItem(code="widget-2", owner_handle="ghost"))  # no such owner
+        s.commit()
+
+    def get_session():
+        with Session(engine) as session:
+            yield session
+
+    parent = FastAPI()
+    parent.mount("/ui", build_ui_app(REL_RESOURCES, get_session))
+    yield TestClient(parent)
+    engine.dispose()
+
+
+def test_detail_page_renders(rel_ui):
+    response = rel_ui.get("/ui/item/widget-1")
+    assert response.status_code == 200
+    assert "widget-1" in response.text
+
+
+def test_new_form_still_reachable_after_detail_route(rel_ui):
+    """Regression: /{slug}/new must be declared before /{slug}/{pk}, or "new"
+    is parsed as a primary key and the create form disappears. Same failure as
+    /query being shadowed in the generated API."""
+    response = rel_ui.get("/ui/item/new")
+    assert response.status_code == 200
+    assert 'name="code"' in response.text
+
+
+def test_list_offers_view_not_edit_or_delete(rel_ui):
+    body = rel_ui.get("/ui/item").text
+    assert ">View<" in body
+    assert ">Delete<" not in body
+
+
+def test_fk_resolves_to_the_targets_primary_key(rel_ui):
+    """owner_handle references handle, but the owner's key is id, so the link
+    must be resolved rather than built from the value."""
+    body = rel_ui.get("/ui/item/widget-1").text
+    assert "/ui/owner/7" in body
+
+
+def test_unresolvable_fk_falls_back_to_the_filtered_list(rel_ui):
+    body = rel_ui.get("/ui/item/widget-2").text
+    assert "/ui/owner/7" not in body
+    assert "/ui/owner?q=ghost" in body
+
+
+def test_related_records_appear_on_the_target(rel_ui):
+    body = rel_ui.get("/ui/owner/7").text
+    assert "widget-1" in body
+
+
+def test_delete_redirects_instead_of_swapping_a_row(rel_ui):
+    """Delete now happens from the detail page, where there is no row to swap."""
+    response = rel_ui.delete("/ui/item/widget-1")
+    assert response.status_code == 200
+    assert response.headers.get("HX-Redirect") == "/ui/item"
+    assert rel_ui.get("/ui/item/widget-1").status_code == 404
+
+
+def test_geopoint_is_not_a_form_input(live_ui, monkeypatch):
+    """A geometry must not be typeable: anything at all could be entered."""
+    from fastapifromfrictionless.web import router as web_router
+
+    fields = UI_RESOURCES["thing"]["fields"]
+    UI_RESOURCES["thing"] = dict(
+        UI_RESOURCES["thing"],
+        fields=fields + [{"name": "spot", "type": "geopoint", "required": False, "fk": None}],
+    )
+    try:
+        body = live_ui.get("/ui/thing/new").text
+        assert 'name="spot"' not in body
+        assert "not editable here" in body
+    finally:
+        UI_RESOURCES["thing"] = dict(UI_RESOURCES["thing"], fields=fields)
+    assert web_router  # keep the import meaningful
+
+
+def test_map_assets_only_load_where_there_is_geometry(rel_ui):
+    assert "leaflet" not in rel_ui.get("/ui/item/widget-1").text

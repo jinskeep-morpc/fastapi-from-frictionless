@@ -30,15 +30,14 @@
     <tr id="row-{{ loop.index }}">
       {% for f in res.fields %}
         {% set v = row[f.name] if row is mapping else row|attr(f.name) %}
-        <td title="{{ v if v is not none else '' }}">{{ "" if v is none else v }}</td>
+        <td title="{{ v if v is not none else '' }}">
+          {%- if v is none -%}{%- elif links.get((rowpk, f.name)) -%}
+            <a href="{{ prefix }}/{{ links[(rowpk, f.name)] }}">{{ v }}</a>
+          {%- else -%}{{ v }}{%- endif -%}
+        </td>
       {% endfor %}
       <td style="white-space:nowrap">
-        <a class="btn" href="{{ prefix }}/{{ slug }}/{{ rowpk }}/edit">Edit</a>
-        <button class="btn danger"
-                hx-delete="{{ prefix }}/{{ slug }}/{{ rowpk }}"
-                hx-target="#row-{{ loop.index }}"
-                hx-swap="outerHTML"
-                hx-confirm="Delete this {{ res.label|lower }}? This cannot be undone.">Delete</button>
+        <a class="btn" href="{{ prefix }}/{{ slug }}/{{ rowpk }}">View</a>
       </td>
     </tr>
   {% endfor %}
