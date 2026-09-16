@@ -1,3 +1,24 @@
+# 2026-09-16 — unique constraint support (#135)
+
+`constraints.unique` was read by nobody: the field loop looked at `required` and the primary
+key, never `unique`, so the constraint silently vanished. Same failure shape as the geo bug in
+[#132] — a schema says something and the generator quietly drops it.
+
+It surfaced deploying morpc-purpleair-model to the PostGIS stack. Postgres requires a FK target
+to carry a unique or PK constraint, and four FKs there point at non-PK columns (`sensor.name`
+three times, `deployment.index` once), so `create_db_and_tables()` died with
+`InvalidForeignKey: there is no unique constraint matching given keys`. SQLite never complains
+about this, which is why the schemas looked fine locally — worth remembering that the SQLite
+default hides a whole class of schema error that only a real deployment catches.
+
+Implementation is a single `unique` flag computed before the geo branch, then merged three ways:
+folded into `Column(...)` for geo fields, appended to an existing `Field(...)` for FK fields,
+and given a fresh `Field(unique=True)` otherwise. Primary keys are excluded — already unique,
+and a second constraint just creates a duplicate index.
+
+Tested each of those paths plus one that execs the generated module and inspects
+`__table__.columns[...].unique`, since string assertions alone were exactly what let #132 through.
+
 # 2026-09-15 — geo fields generated non-importable models (#132)
 
 `type_map` mapped `geopoint`/`geojson` to the expression `Geometry('POINT')`, which landed in

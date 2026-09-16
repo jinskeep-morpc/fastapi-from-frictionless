@@ -382,3 +382,126 @@ def test_generated_geo_models_are_importable(geo_folder, tmp_path):
         assert module.Site.__tablename__ == "site"
     finally:
         sys.modules.pop("generated_geo_models", None)
+
+
+# ---------------------------------------------------------------------------
+# Unique constraints (#135)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def unique_folder(tmp_path):
+    write_schema(
+        tmp_path,
+        "sensor",
+        """\
+        fields:
+          - name: macaddr
+            type: string
+            constraints: {required: true, unique: true}
+          - name: name
+            type: string
+            constraints: {required: true, unique: true}
+          - name: label
+            type: string
+            constraints: {unique: true}
+          - name: status
+            type: string
+        primaryKey:
+          - macaddr
+    """,
+    )
+    write_schema(
+        tmp_path,
+        "deployment",
+        """\
+        fields:
+          - name: id
+            type: integer
+          - name: sensor_name
+            type: string
+            constraints: {unique: true}
+        primaryKey:
+          - id
+        foreignKeys:
+          - fields: [sensor_name]
+            reference: {resource: sensor, fields: [name]}
+    """,
+    )
+    return tmp_path
+
+
+def test_unique_constraint_on_plain_field(unique_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(unique_folder)).build().save(out)
+    assert "name: str = Field(unique=True)" in out.read_text()
+
+
+def test_unique_constraint_on_optional_field(unique_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(unique_folder)).build().save(out)
+    assert "label: str | None = Field(unique=True)" in out.read_text()
+
+
+def test_unique_merged_into_existing_foreign_key_field(unique_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(unique_folder)).build().save(out)
+    assert (
+        "sensor_name: str | None = Field(foreign_key='sensor.name', index=True, unique=True)"
+        in out.read_text()
+    )
+
+
+def test_primary_key_does_not_get_redundant_unique(unique_folder, tmp_path):
+    # A PK is already unique; a second constraint would create a duplicate index.
+    out = tmp_path / "models.py"
+    models(folder_str(unique_folder)).build().save(out)
+    assert "macaddr: str = Field(primary_key = True)" in out.read_text()
+    assert "primary_key = True, unique=True" not in out.read_text()
+
+
+def test_field_without_unique_is_unchanged(unique_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(unique_folder)).build().save(out)
+    assert "status: str | None\n" in out.read_text()
+
+
+def test_unique_geo_field_sets_flag_on_column(tmp_path):
+    write_schema(
+        tmp_path,
+        "site",
+        """\
+        fields:
+          - name: id
+            type: integer
+          - name: footprint
+            type: geopoint
+            constraints: {unique: true}
+        primaryKey:
+          - id
+    """,
+    )
+    out = tmp_path / "models.py"
+    models(folder_str(tmp_path)).build().save(out)
+    assert (
+        "footprint: Any | None = Field(default=None, "
+        "sa_column=Column(Geometry('POINT'), unique=True))" in out.read_text()
+    )
+
+
+def test_unique_models_are_importable(unique_folder, tmp_path):
+    import importlib.util
+    import sys
+
+    out = tmp_path / "models.py"
+    models(folder_str(unique_folder)).build().save(out)
+
+    spec = importlib.util.spec_from_file_location("generated_unique_models", out)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["generated_unique_models"] = module
+    try:
+        spec.loader.exec_module(module)
+        assert module.Sensor.__table__.columns["name"].unique is True
+        assert module.Sensor.__table__.columns["status"].unique in (None, False)
+    finally:
+        sys.modules.pop("generated_unique_models", None)

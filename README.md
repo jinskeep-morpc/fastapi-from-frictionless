@@ -60,6 +60,36 @@ pip install "fastapifromfrictionless[app]"
 
 If your schemas do not use geo fields, `pip install fastapifromfrictionless` is sufficient and no GDAL install is needed.
 
+### Unique constraints
+
+Frictionless `constraints.unique: true` emits a unique constraint on the column:
+
+```python
+name: str = Field(unique=True)
+```
+
+The flag is merged into whatever the field already carries, so a foreign key keeps its
+settings:
+
+```python
+sensor_name: str | None = Field(foreign_key="sensor.name", index=True, unique=True)
+```
+
+Primary keys are skipped — already unique, so a second constraint would only add a duplicate
+index.
+
+**This matters for foreign keys.** PostgreSQL requires a FK to reference a column with a unique
+or primary key constraint. If a schema's `foreignKeys` targets a non-PK column, mark that column
+`unique: true` or table creation fails with:
+
+```
+psycopg2.errors.InvalidForeignKey: there is no unique constraint matching given keys
+for referenced table "sensor"
+```
+
+SQLite does not enforce this, so such a schema works locally and fails only on a real
+deployment.
+
 ### Geo field types
 
 Frictionless `geopoint` and `geojson` fields generate a geoalchemy2 column rather than a plain

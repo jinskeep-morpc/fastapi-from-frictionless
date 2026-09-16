@@ -106,16 +106,21 @@ class models:
             if (field.name == "id") and auto_id:
                 continue
 
+            # A primary key is already unique; a second constraint would be redundant.
+            unique = bool(field.constraints.get("unique")) and field.name not in schema.primary_key
+
             if field.type in geo_type_map:
                 geometry = f"Geometry('{geo_type_map[field.type]}')"
+                uniq_arg = ", unique=True" if unique else ""
                 if "required" in field.constraints:
                     field_string = (
-                        f"{field.name}: Any = Field(sa_column=Column({geometry}, nullable=False))"
+                        f"{field.name}: Any = "
+                        f"Field(sa_column=Column({geometry}, nullable=False{uniq_arg}))"
                     )
                 else:
                     field_string = (
                         f"{field.name}: Any | None = "
-                        f"Field(default=None, sa_column=Column({geometry}))"
+                        f"Field(default=None, sa_column=Column({geometry}{uniq_arg}))"
                     )
                 self.logger.info(f"{field} converted to {field_string}")
                 basemodel_fields.append(field_string)
@@ -139,6 +144,12 @@ class models:
                     field_string = f"{field_string.rstrip(')')}, foreign_key='{field.name.replace('_', '.')}', index=True)"
                 else:
                     field_string += f" = Field({'default=None, ' if required else ''}foreign_key='{field.name.replace('_', '.')}', index=True)"
+
+            if unique:
+                if " = Field(" in field_string:
+                    field_string = f"{field_string.rstrip(')')}, unique=True)"
+                else:
+                    field_string += " = Field(unique=True)"
 
             self.logger.info(f"{field} converted to {field_string}")
             basemodel_fields.append(field_string)
