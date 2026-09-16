@@ -42,6 +42,8 @@ dev = [
     "jinja2",
     # Generated geo models import geoalchemy2; the #132 regression test execs them.
     "geoalchemy2",
+    # starlette.testclient needs httpx; the UI tests drive a live app through it.
+    "httpx",
 ]
 
 [project.scripts]
