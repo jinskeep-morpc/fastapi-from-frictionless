@@ -122,6 +122,30 @@ Each stack must use a different `SUBNET_BASE` and port set. Example:
 
 pgAdmin data (saved connections, sessions) is persisted in `./pgadmin/` and is excluded from git via `.gitignore`.
 
+## Browser CRUD UI
+
+The generated app is JSON-only by default. To build in the `/ui` interface, set in `.env`:
+
+```
+WITH_UI=true
+SKIP_UI=reading
+```
+
+then rebuild, because the UI is generated at **build** time like everything else:
+
+```bash
+docker compose build api
+docker compose up -d api
+```
+
+`SKIP_UI` takes space-separated resource names and omits them from the UI. A table with tens of
+millions of rows should not get a browse page.
+
+Sign in with the value of `API_KEY`. For per-user identity, put Cloudflare Access, Tailscale or
+oauth2-proxy in front and set `UI_PROXY_IDENTITY_HEADER` to the header it injects — only where
+that proxy is the only route to the app, since anything reaching it directly can forge the
+header.
+
 ## Updating schemas
 
 Schema changes require rebuilding the API image (generation happens at build time, not startup):
@@ -194,6 +218,9 @@ reachable.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `BIND_ADDRESS` | `127.0.0.1` | Host interface the published ports listen on. See **Network exposure** below before changing it |
+| `WITH_UI` | *(unset)* | Any non-empty value builds the `/ui` CRUD interface. Build-time: rebuild after changing |
+| `SKIP_UI` | *(unset)* | Space-separated resources to omit from the UI |
+| `UI_PROXY_IDENTITY_HEADER` | *(unset)* | Header from an upstream identity proxy to trust for UI sign-in |
 | `SUBNET_BASE` | `10.91` | First two octets of the internal bridge network; must be unique per simultaneous stack |
 | `API_PORT` | `8000` | Host port for the FastAPI service; must be unique per simultaneous stack |
 | `PGADMIN_PORT` | `5050` | Host port for pgAdmin; must be unique per simultaneous stack |

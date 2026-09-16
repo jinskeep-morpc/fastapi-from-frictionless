@@ -13,8 +13,20 @@ RUN if [ -n "$PACKAGE_VERSION" ]; then \
     fi
 ARG SCHEMA_FOLDER=schemas
 COPY ${SCHEMA_FOLDER}/ /schemas/
+
+# WITH_UI adds the browser CRUD interface at /ui; SKIP_UI omits resources from
+# it, e.g. a table too large to browse. Both are build-time: changing them
+# needs `docker compose build api`, not just a restart.
+ARG WITH_UI=
+ARG SKIP_UI=
 RUN mkdir -p /generator/api && \
-    python -m fastapifromfrictionless.cli generate /schemas --output /generator/api && \
+    if [ -n "$WITH_UI" ]; then \
+      UI_ARGS="--with-ui"; \
+      if [ -n "$SKIP_UI" ]; then UI_ARGS="$UI_ARGS --skip-ui $SKIP_UI"; fi; \
+    else \
+      UI_ARGS=""; \
+    fi && \
+    python -m fastapifromfrictionless.cli generate /schemas --output /generator/api $UI_ARGS && \
     touch /generator/api/__init__.py
 
 # Stage 2 — lean runtime image

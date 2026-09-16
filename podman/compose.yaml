@@ -62,12 +62,15 @@ services:
       dockerfile: Dockerfile
       args:
         - SCHEMA_FOLDER=${SCHEMA_FOLDER:-schemas}
+        - WITH_UI=${WITH_UI:-}
+        - SKIP_UI=${SKIP_UI:-}
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
       - API_KEY=${API_KEY}
       - SCHEMA_FOLDER=/schemas
       - API_URL=${API_URL}
+      - UI_PROXY_IDENTITY_HEADER=${UI_PROXY_IDENTITY_HEADER:-}
     volumes:
       - ./${SCHEMA_FOLDER:-schemas}:/schemas
     ports:
