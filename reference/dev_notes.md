@@ -1,3 +1,26 @@
+# 2026-09-16 — compose bound everything to 0.0.0.0 (#142)
+
+`podman/compose.yaml` published ports as bare `HOST:CONTAINER`, which Docker and Podman read as
+`0.0.0.0:HOST`. On a laptop that is untidy; on a VPS it puts PostgreSQL and a pgAdmin console on
+the public internet behind nothing but the `.env` passwords.
+
+Now `${BIND_ADDRESS:-127.0.0.1}:...`, so the safe configuration is what you get by doing
+nothing and exposure is an explicit, greppable opt-in.
+
+Verifying this needed care. The first runtime check looked like it proved the fix wrong —
+`ss` showed `0.0.0.0:5432`. The test stack had actually failed to start on a subnet collision
+with another running project, so what I measured was a different container from an earlier test
+still holding the port. Re-run on its own subnet and port it binds `127.0.0.1:5439`, loopback
+connects, and the external interface refuses. `docker compose config` alone would not have
+caught that either, since it only renders intent.
+
+Worth remembering: Docker's port rules bypass host firewall policy, so an operator who closed
+5432 in ufw would have seen a closed port and still been exposed. That is the part that makes
+the insecure default genuinely dangerous rather than merely untidy.
+
+Breaking for anyone relying on the old behaviour to reach a stack from another machine;
+`BIND_ADDRESS=0.0.0.0` restores it.
+
 # 2026-09-16 — relationship cardinality (#138)
 
 Every relationship was emitted as a list on both sides. The side that *owns* the foreign key is

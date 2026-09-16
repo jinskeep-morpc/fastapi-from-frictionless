@@ -7,6 +7,12 @@
 #   http://localhost:${PGADMIN_PORT}  → pgAdmin
 #   localhost:${DB_PORT}              → PostgreSQL (direct)
 #
+# Services bind to 127.0.0.1 by default, so they are reachable from the host
+# only. Put a reverse proxy, tunnel or VPN in front to expose them. Setting
+# BIND_ADDRESS=0.0.0.0 publishes them on every interface, which on a public
+# host means PostgreSQL and pgAdmin are on the internet - note that Docker's
+# port publishing writes its own iptables rules and bypasses a host firewall.
+#
 # Copy this file, Dockerfile, and .env.example to your deployment folder,
 # then run: docker compose up -d   (or: podman-compose up -d)
 
@@ -20,7 +26,7 @@ services:
     volumes:
       - ./postgres:/var/lib/postgresql/data
     ports:
-      - ${DB_PORT:-5432}:5432
+      - ${BIND_ADDRESS:-127.0.0.1}:${DB_PORT:-5432}:5432
     networks:
       app_network:
         ipv4_address: ${SUBNET_BASE:-10.91}.0.5
@@ -40,7 +46,7 @@ services:
     volumes:
       - ./pgadmin:/var/lib/pgadmin
     ports:
-      - ${PGADMIN_PORT:-5050}:80
+      - ${BIND_ADDRESS:-127.0.0.1}:${PGADMIN_PORT:-5050}:80
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,7 +71,7 @@ services:
     volumes:
       - ./${SCHEMA_FOLDER:-schemas}:/schemas
     ports:
-      - ${API_PORT:-8000}:8000
+      - ${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8000}:8000
     depends_on:
       postgres:
         condition: service_healthy
