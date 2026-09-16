@@ -30,7 +30,7 @@
 
 {% for name, point in geo.items() %}
 <div class="mapwrap">
-  <div class="map" id="map-{{ name }}" data-lat="{{ point.lat }}" data-lon="{{ point.lon }}"></div>
+  <div class="map" id="map-self-{{ name }}" data-lat="{{ point.lat }}" data-lon="{{ point.lon }}"></div>
 </div>
 {% endfor %}
 
@@ -47,6 +47,12 @@
       {%- else %}{{ fv }}{% endif %}</dd>
   {% endfor %}
 </dl>
+{% for name, point in fwd.geo.items() %}
+<div class="mapwrap">
+  <div class="map" id="map-{{ fwd.slug }}-{{ loop.index }}-{{ name }}"
+       data-lat="{{ point.lat }}" data-lon="{{ point.lon }}"></div>
+</div>
+{% endfor %}
 <p><a href="{{ prefix }}/{{ fwd.slug }}/{{ fwd.pk|urlencode }}">Open this {{ fwd.label|lower }} &rarr;</a></p>
 {% endfor %}
 

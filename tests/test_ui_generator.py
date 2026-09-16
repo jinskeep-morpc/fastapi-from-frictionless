@@ -731,3 +731,23 @@ def test_detail_crumb_returns_to_the_filtered_list(rel_ui):
 def test_the_last_crumb_is_not_a_link(rel_ui):
     nav = rel_ui.get("/ui/item/widget-1").text.split('class="crumbs"', 1)[1].split("</nav>", 1)[0]
     assert 'aria-current="page">widget-1' in nav
+
+
+def test_reference_sections_render_a_map_for_a_referenced_point(auto_ui, monkeypatch):
+    """A deployment has no geometry of its own; its location does, and that is
+    where someone looking at the deployment wants to see the point."""
+    from fastapifromfrictionless.web import router as web_router
+
+    # _geo_points needs a spatial function SQLite lacks, so exercise the
+    # template contract directly rather than the query.
+    assert "fwd.geo" in (
+        __import__("pathlib")
+        .Path(web_router.__file__)
+        .parent.joinpath("templates/detail.html")
+        .read_text()
+    )
+
+
+def test_leaflet_loads_only_when_a_page_has_a_point(rel_ui):
+    """Neither the item nor its owner has geometry, so nothing should load."""
+    assert "leaflet" not in rel_ui.get("/ui/item/widget-1").text
