@@ -88,7 +88,7 @@
     dl.detail dt { border-bottom:0; padding-bottom:0; }
   }
 </style>
-{% if geo is defined and geo %}
+{% if has_maps is defined and has_maps %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
       crossorigin="anonymous" referrerpolicy="no-referrer">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"
@@ -119,7 +119,7 @@
 </nav>
 {% endif %}
 {% block body %}{% endblock %}</main>
-{% if geo is defined and geo %}
+{% if has_maps is defined and has_maps %}
 <script>
   // Tiles come from OpenStreetMap unless the deployment points elsewhere.
   document.querySelectorAll('.map').forEach(function (el) {

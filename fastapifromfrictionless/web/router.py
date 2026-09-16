@@ -266,6 +266,8 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
         row = session.exec(_pk_filter(select(res["table"]), res, pk)).first()
         if row is None:
             raise HTTPException(status_code=404, detail="Record not found")
+        geo = _geo_points(row, res, session)
+        forward = _forward(row, res, resources, slug_of_table, session)
         return TEMPLATES.TemplateResponse(
             request,
             "detail.html",
@@ -281,9 +283,13 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
                     (pk, None),
                 ),
                 links=_fk_links([row], res, resources, slug_of_table, session),
-                forward=_forward(row, res, resources, slug_of_table, session),
+                forward=forward,
                 related=_related(row, res, resources, slug_of_table, session),
-                geo=_geo_points(row, res, session),
+                geo=geo,
+                # Leaflet is only loaded where something actually needs it, and
+                # a referenced location can carry a point when the record itself
+                # does not - a deployment has no geometry, its location does.
+                has_maps=bool(geo) or any(f["geo"] for f in forward),
                 pk_of=_pk_of,
             ),
         )
@@ -518,6 +524,9 @@ def _forward(row, res: dict, resources: dict, slug_of_table: dict, session: Sess
                 "res": target,
                 "row": target_row,
                 "pk": _pk_of(target_row, target),
+                # Same treatment as the record's own fields: a geometry column
+                # renders as coordinates, never as the raw binary.
+                "geo": _geo_points(target_row, target, session),
             }
         )
     return out

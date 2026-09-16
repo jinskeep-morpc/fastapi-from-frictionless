@@ -1,3 +1,36 @@
+# 2026-09-16 — references show every field, and their maps
+
+The forward reference cards showed three fields, so anything else meant opening the referenced
+record anyway — the summary saved a click only when you happened to want one of the three. Each
+reference is now a full section listing every field, with a map where it has a geo point and a
+link through.
+
+That immediately exposed a leak: a referenced location rendered its geometry as raw WKB hex,
+`0101000020e610...`, because coordinate parsing only ran for the record's own fields. Any value
+rendered in a new place needs the formatting the original place gave it; the binary was invisible
+while only three fields showed.
+
+The map gate also had to widen. Leaflet was loaded when the record itself had a point, which is
+exactly wrong for the interesting case: a deployment has no geometry, its location does, and that
+is where someone looking at the deployment wants to see it. The condition now covers the record
+and its references together, so a sensor page with no geometry anywhere still loads nothing.
+
+Two checks misled me today, both my own greps rather than the code — a `sed` range that truncated
+a card, and a single-line pattern against a div whose attributes span two lines. Both looked like
+a missing feature. Confirm the shape of what you are matching before believing a negative.
+
+# 2026-09-16 — references show every field
+
+The forward reference cards showed three fields, which meant opening the referenced record
+anyway for anything else — the summary saved a click only when you happened to want one of the
+three. They now render as a full section, every field as a definition list, with a link through.
+
+That immediately exposed a leak: a referenced location rendered its geometry as raw WKB hex,
+`0101000020e610...`, because the coordinate parsing only ran for the record's own fields. Forward
+references now get the same treatment and show coordinates. Worth remembering that any value
+rendered in a new place needs the same formatting the original place gave it — the binary was
+invisible while only three fields showed.
+
 # 2026-09-16 — breadcrumbs and preserved list state (#163)
 
 Only the detail page had any back-navigation, a lone `← Resource` link. The edit and create
