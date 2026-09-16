@@ -1,3 +1,25 @@
+# 2026-09-16 — breadcrumbs and preserved list state (#163)
+
+Only the detail page had any back-navigation, a lone `← Resource` link. The edit and create
+forms had none at all, so the only way out was the browser button.
+
+Breadcrumbs now come from the URL on every page. Hierarchy rather than a trail, deliberately:
+the browser's back button already covers how you got somewhere, while a trail needs session
+state or `?from=` chains that grow unbounded, break on a shared link and loop when a sensor
+links to a deployment that links back. URL-derived crumbs stay correct however the page was
+reached.
+
+The one piece of state worth keeping is the list you left. Opening a record used to discard the
+filter and sort, so after the filtering work every View cost you your place. The View link now
+carries the list's query string and the resource crumb returns to exactly that page. One level
+deep, survives sharing, and an unfiltered list adds no parameter at all rather than a trailing
+`?from=`.
+
+Small thing worth noting about the tests: asserting on rendered breadcrumbs needed a helper that
+pulls the labels out of the nav, because asserting on raw HTML would have broken on every markup
+tweak. Cheap to write, and it makes the tests read as what a user sees rather than what the
+template emits.
+
 # 2026-09-16 — next value for auto-assigned keys (#160)
 
 The create form rendered an empty `id` box for auto-incrementing keys. Whatever was typed was

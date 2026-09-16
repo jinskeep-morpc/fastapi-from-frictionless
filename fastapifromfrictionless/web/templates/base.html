@@ -69,6 +69,12 @@
                  border-bottom:1px solid var(--line); }
   dl.detail dd { margin:0; padding:.35rem 0; border-bottom:1px solid var(--line);
                  overflow-wrap:anywhere; }
+  .crumbs { font-size:.85rem; margin:0 0 1rem; display:flex; flex-wrap:wrap;
+            gap:.35rem; align-items:baseline; }
+  .crumbs a { color:var(--muted); text-decoration:none; }
+  .crumbs a:hover { color:var(--fg); text-decoration:underline; }
+  .crumbs span[aria-current] { color:var(--fg); }
+  .crumbs .sep { color:var(--line); }
   .titlebar { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
   .titlebar h1 { margin:0; }
   .titleactions { margin-left:auto; display:flex; gap:.5rem; }
@@ -102,7 +108,17 @@
     {% endif %}
   </span>
 </header>
-<main>{% block body %}{% endblock %}</main>
+<main>
+{% if crumbs is defined and crumbs %}
+<nav class="crumbs" aria-label="Breadcrumb">
+  {% for label, href in crumbs %}
+    {%- if href and not loop.last %}<a href="{{ href }}">{{ label }}</a>
+    {%- else %}<span aria-current="page">{{ label }}</span>{% endif %}
+    {%- if not loop.last %}<span class="sep" aria-hidden="true">/</span>{% endif %}
+  {% endfor %}
+</nav>
+{% endif %}
+{% block body %}{% endblock %}</main>
 {% if geo is defined and geo %}
 <script>
   // Tiles come from OpenStreetMap unless the deployment points elsewhere.

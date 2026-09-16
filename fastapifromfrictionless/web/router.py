@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Request
+from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import String, cast, or_
@@ -139,7 +139,9 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
         counts = {}
         for slug, res in resources.items():
             counts[slug] = session.exec(select(func.count()).select_from(res["table"])).one()
-        return TEMPLATES.TemplateResponse(request, "index.html", ctx(request, counts=counts))
+        return TEMPLATES.TemplateResponse(
+            request, "index.html", ctx(request, counts=counts, crumbs=_crumbs(prefix))
+        )
 
     @router.get("/{slug}", response_class=HTMLResponse)
     def list_rows(
@@ -177,10 +179,13 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
         page = min(page, pages)
         rows = session.exec(statement.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE)).all()
 
+        list_query = request.url.query
         context = ctx(
             request,
             slug=slug,
             res=res,
+            list_query=list_query,
+            crumbs=_crumbs(prefix, (res["label"], None)),
             rows=rows,
             total=total,
             page=page,
@@ -208,6 +213,7 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
                 res=res,
                 row=None,
                 errors=None,
+                crumbs=_crumbs(prefix, (res["label"], f"{prefix}/{slug}"), ("New", None)),
                 options=_fk_options(res, resources, session),
                 auto_keys=_auto_keys(res, session),
             ),
@@ -239,6 +245,7 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
                     res=res,
                     row=values,
                     errors=str(exc),
+                    crumbs=_crumbs(prefix, (res["label"], f"{prefix}/{slug}"), ("New", None)),
                     options=_fk_options(res, resources, session),
                     auto_keys=_auto_keys(res, session),
                 ),
@@ -247,7 +254,13 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
         return RedirectResponse(f"{prefix}/{slug}", status_code=303)
 
     @router.get("/{slug}/{pk}", response_class=HTMLResponse)
-    def detail(request: Request, slug: str, pk: str, session: Session = Depends(get_session)):
+    def detail(
+        request: Request,
+        slug: str,
+        pk: str,
+        from_: str = Query("", alias="from"),
+        session: Session = Depends(get_session),
+    ):
         guard(request)
         res = _resource(slug)
         row = session.exec(_pk_filter(select(res["table"]), res, pk)).first()
@@ -262,6 +275,11 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
                 res=res,
                 row=row,
                 pk=pk,
+                crumbs=_crumbs(
+                    prefix,
+                    (res["label"], f"{prefix}/{slug}" + (f"?{from_}" if from_ else "")),
+                    (pk, None),
+                ),
                 links=_fk_links([row], res, resources, slug_of_table, session),
                 forward=_forward(row, res, resources, slug_of_table, session),
                 related=_related(row, res, resources, slug_of_table, session),
@@ -287,6 +305,12 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
                 row=row,
                 pk=pk,
                 errors=None,
+                crumbs=_crumbs(
+                    prefix,
+                    (res["label"], f"{prefix}/{slug}"),
+                    (pk, f"{prefix}/{slug}/{pk}"),
+                    ("Edit", None),
+                ),
                 options=_fk_options(res, resources, session),
             ),
         )
@@ -328,6 +352,12 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
                     row=values,
                     pk=pk,
                     errors=str(exc),
+                    crumbs=_crumbs(
+                        prefix,
+                        (res["label"], f"{prefix}/{slug}"),
+                        (pk, f"{prefix}/{slug}/{pk}"),
+                        ("Edit", None),
+                    ),
                     options=_fk_options(res, resources, session),
                 ),
                 status_code=400,
@@ -356,6 +386,21 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
         return HTMLResponse("", status_code=200, headers={"HX-Redirect": f"{prefix}/{slug}"})
 
     return router
+
+
+def _crumbs(prefix: str, *parts) -> list:
+    """Breadcrumbs from the URL, not from history.
+
+    Hierarchy rather than a trail: the browser's back button already covers how
+    you got here, while a trail needs state that grows unbounded and breaks on
+    a shared link. Derived crumbs stay correct however the page was reached.
+
+    Each part is (label, href or None); the last is the current page and is not
+    a link.
+    """
+    trail = [("Data", prefix)]
+    trail.extend(parts)
+    return trail
 
 
 def _pk_of(row, res: dict) -> str:

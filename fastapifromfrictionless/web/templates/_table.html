@@ -37,7 +37,7 @@
         </td>
       {% endfor %}
       <td style="white-space:nowrap">
-        <a class="btn" href="{{ prefix }}/{{ slug }}/{{ rowpk|urlencode }}">View</a>
+        <a class="btn" href="{{ prefix }}/{{ slug }}/{{ rowpk|urlencode }}{% if list_query %}?from={{ list_query|urlencode }}{% endif %}">View</a>
       </td>
     </tr>
   {% endfor %}
