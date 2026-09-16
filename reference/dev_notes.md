@@ -1,3 +1,23 @@
+# 2026-09-16 — next value for auto-assigned keys (#160)
+
+The create form rendered an empty `id` box for auto-incrementing keys. Whatever was typed was
+discarded, because the generator omits such a key from the Create model — the form asked a
+question and threw the answer away, while giving no hint what the record would be called.
+
+The signal is the Create model itself: a primary key absent from `model_fields` is one only the
+database may set. Those render read-only, pre-filled with `max(id) + 1`, labelled as assigned on
+save. A prediction rather than a reservation, which is exactly why it is not editable.
+
+The more serious thing this uncovered is downstream. Bulk loading explicit ids never advances
+the sequence backing them, so `nextval` still returned 1 against a table whose max was 72 —
+creating a contact failed with a duplicate key through both the UI and the API, and would have
+kept failing for 72 attempts. Nothing surfaces this until someone tries to add a record, which
+in a migration project is long after the load looked successful. `load_metadata.py` now resyncs
+every identity sequence past the loaded data.
+
+Worth generalising: any loader that writes explicit primary keys into a sequence-backed column
+leaves this trap behind.
+
 # 2026-09-16 — both link directions on detail pages (#158)
 
 Detail pages treated the two directions inconsistently. Reverse relationships got a section, but
