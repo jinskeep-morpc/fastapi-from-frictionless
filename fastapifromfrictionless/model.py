@@ -154,6 +154,12 @@ class models:
             self.logger.info(f"{field} converted to {field_string}")
             basemodel_fields.append(field_string)
 
+        # Geo fields need a pydantic serializer on the base model: the annotation is
+        # Any, so a WKBElement read back from the database has nothing to dump it. See #167.
+        geo_fields = [f for f in schema.field_names if schema.get_field(f).type in geo_type_map]
+        if geo_fields:
+            self.logger.info(f"{name} geo fields needing a serializer: {geo_fields}")
+
         # Precompute derived template context
         basemodel_fields_str = "\n    ".join(basemodel_fields)
 
@@ -189,6 +195,7 @@ class models:
             relationships=relationships,
             fk_models=fk_models,
             rel_models=rel_models,
+            geo_fields=geo_fields,
         )
         self.logger.debug(result)
         return result

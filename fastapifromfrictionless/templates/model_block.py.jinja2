@@ -7,6 +7,12 @@ class << name >>Base(SQLModel):
 <% else %>
     pass
 <% endif %>
+<% for gf in geo_fields %>
+
+    @field_serializer('<< gf >>')
+    def serialize_<< gf >>(self, value):
+        return geometry_to_geojson(value)
+<% endfor %>
 
 class << name >>(<< name >>Base, TimestampMixin, table=True):
 <% if auto_id %>

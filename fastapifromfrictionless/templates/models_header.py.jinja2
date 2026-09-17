@@ -10,7 +10,31 @@ from sqlmodel import Field, Relationship, SQLModel
 from datetime import date, datetime, timezone, time, timedelta
 from pydantic import EmailStr, AnyUrl, Json
 <% if has_geo %>
+from pydantic import field_serializer
 from geoalchemy2.types import Geometry
+
+
+def geometry_to_geojson(value):
+    '''Convert a geoalchemy2 geometry to a GeoJSON mapping.
+
+    A read returns a WKBElement, which pydantic has no serializer for -- the
+    field is annotated Any because geoalchemy2 exposes no static type, so
+    dumping the response model raises PydanticSerializationError and the
+    endpoint 500s. This stays hidden while the column is NULL, because None
+    serializes fine.
+
+    Values that are already GeoJSON, or are plain strings, are passed through
+    untouched: a Create model may carry either.
+    '''
+    if value is None or isinstance(value, (dict, str)):
+        return value
+    # Imported here rather than at module scope: geoalchemy2.shape pulls in shapely,
+    # and this module must stay importable without it. Only an actual geometry read
+    # needs the conversion.
+    from geoalchemy2.shape import to_shape
+    from shapely.geometry import mapping
+
+    return mapping(to_shape(value))
 <% endif %>
 
 def utcnow():
