@@ -30,6 +30,8 @@ dependencies = [
 app = [
     "fastapi_querybuilder",
     "geoalchemy2",
+    # geoalchemy2.shape.to_shape needs it; without it a geo response cannot be serialized.
+    "shapely",
 ]
 generate = [
     "jinja2",

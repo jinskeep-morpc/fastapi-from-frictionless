@@ -1,6 +1,7 @@
 """Unit tests for the models code generator."""
 
 import textwrap
+from datetime import datetime, timezone
 
 import pytest
 
@@ -598,3 +599,108 @@ def test_relationship_cardinality_configures_and_matches(cardinality_folder, tmp
         assert module.Station.__mapper__.relationships["installs"].uselist is True
     finally:
         sys.modules.pop("generated_cardinality_models", None)
+
+
+def test_geo_field_gets_a_public_serializer(geo_folder, tmp_path):
+    # Regression (#167): a geo field is annotated Any, so a WKBElement read back from the
+    # database had no pydantic serializer and every read endpoint 500'd once the column
+    # held a value.
+    out = tmp_path / "models.py"
+    models(folder_str(geo_folder)).build().save(out)
+    text = out.read_text()
+    assert "@field_serializer('location')" in text
+    assert "@field_serializer('footprint')" in text
+    assert "def geometry_to_geojson(value):" in text
+
+
+def test_non_geo_schema_omits_the_geometry_serializer(simple_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(simple_folder)).build().save(out)
+    text = out.read_text()
+    assert "field_serializer" not in text
+    assert "geometry_to_geojson" not in text
+    assert "shapely" not in text
+
+
+def _geo_schema(tmp_path, resource):
+    """A geo schema under a unique resource name.
+
+    SQLModel.metadata is process-global, so two generated modules defining the same
+    table collide with InvalidRequestError. Each test that imports one needs its own.
+    """
+    write_schema(
+        tmp_path,
+        resource,
+        """\
+        fields:
+          - name: id
+            type: integer
+          - name: location
+            type: geopoint
+          - name: footprint
+            type: geojson
+        primaryKey:
+          - id
+        """,
+    )
+    return tmp_path
+
+
+def _load(folder, tmp_path, modname):
+    import importlib.util
+    import sys
+
+    out = tmp_path / "models.py"
+    models(folder_str(folder)).build().save(out)
+    spec = importlib.util.spec_from_file_location(modname, out)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[modname] = module
+    try:
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        sys.modules.pop(modname, None)
+
+
+def test_wkbelement_serializes_to_geojson(tmp_path):
+    """The heart of #167: text assertions miss this, so round-trip a real WKBElement.
+
+    Before the fix this raised PydanticSerializationError: Unable to serialize
+    unknown type: <class 'geoalchemy2.elements.WKBElement'>.
+    """
+    import json
+
+    from geoalchemy2.shape import from_shape
+    from shapely.geometry import Point
+
+    module = _load(_geo_schema(tmp_path, "wkbsite"), tmp_path, "generated_wkb_models")
+
+    record = module.WkbsitePublic(
+        id=1,
+        location=from_shape(Point(-82.9988, 39.9612), srid=4326),
+        footprint=None,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+
+    payload = json.loads(record.model_dump_json())
+    assert payload["location"] == {"type": "Point", "coordinates": [-82.9988, 39.9612]}
+    assert payload["footprint"] is None
+
+
+def test_geometry_serializer_passes_through_non_wkb_values(tmp_path):
+    """A Create model may carry GeoJSON or a WKT string; neither should be mangled."""
+    import json
+
+    module = _load(_geo_schema(tmp_path, "pasite"), tmp_path, "generated_pa_models")
+
+    geojson = {"type": "Point", "coordinates": [0.0, 0.0]}
+    dumped = json.loads(
+        module.PasiteCreate(id=1, location=geojson, footprint=None).model_dump_json()
+    )
+    assert dumped["location"] == geojson
+
+    dumped = json.loads(
+        module.PasiteCreate(id=1, location="POINT(0 0)", footprint=None).model_dump_json()
+    )
+    assert dumped["location"] == "POINT(0 0)"
