@@ -12,8 +12,6 @@ from pydantic import EmailStr, AnyUrl, Json
 <% if has_geo %>
 from pydantic import field_serializer
 from geoalchemy2.types import Geometry
-from geoalchemy2.shape import to_shape
-from shapely.geometry import mapping
 
 
 def geometry_to_geojson(value):
@@ -30,6 +28,12 @@ def geometry_to_geojson(value):
     '''
     if value is None or isinstance(value, (dict, str)):
         return value
+    # Imported here rather than at module scope: geoalchemy2.shape pulls in shapely,
+    # and this module must stay importable without it. Only an actual geometry read
+    # needs the conversion.
+    from geoalchemy2.shape import to_shape
+    from shapely.geometry import mapping
+
     return mapping(to_shape(value))
 <% endif %>
 
