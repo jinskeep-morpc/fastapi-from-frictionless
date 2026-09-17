@@ -10,7 +10,7 @@
 {% if rows %}
 <table>
   <thead><tr>
-    {% for f in res.fields %}
+    {% for f in (res.fields if is_admin else res.display_fields) %}
       {% set is_sorted = (sort == f.name) %}
       {% set next_dir = 'desc' if (is_sorted and dir == 'asc') else 'asc' %}
       <th>
@@ -28,7 +28,7 @@
   {% for row in rows %}
     {% set rowpk = pk_of(row, res) %}
     <tr id="row-{{ loop.index }}">
-      {% for f in res.fields %}
+      {% for f in (res.fields if is_admin else res.display_fields) %}
         {% set v = row[f.name] if row is mapping else row|attr(f.name) %}
         <td title="{{ v if v is not none else '' }}">
           {%- if v is none -%}{%- elif links.get((rowpk, f.name)) -%}

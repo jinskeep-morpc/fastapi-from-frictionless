@@ -18,6 +18,9 @@ class << name >>(<< name >>Base, TimestampMixin, table=True):
 <% if auto_id %>
     id: int | None = Field(default=None, primary_key=True)
 <% endif %>
+<% if table_extra_str %>
+    << table_extra_str >>
+<% endif %>
 <% for rel in rel_models %>
     << rel.attr >>: list['<< rel.name >>'] | None = Relationship(back_populates='<< rel.back_populates >>'<% if rel.fk_ref %>, sa_relationship_kwargs={'foreign_keys': '<< rel.fk_ref >>'}<% endif %>)
 <% endfor %>
@@ -29,7 +32,11 @@ class << name >>(<< name >>Base, TimestampMixin, table=True):
 <% endif %>
 
 class << name >>Create(<< name >>Base):
+<% if writable_extra_str %>
+    << writable_extra_str >>
+<% else %>
     pass
+<% endif %>
 
 class << name >>Update(<< name >>Base):
 <% if update_fields_str %>
@@ -44,6 +51,13 @@ class << name >>Public(<< name >>Base):
 <% endif %>
     created_at: datetime
     updated_at: datetime
+<% if has_sensitive %>
+
+class << name >>Admin(<< name >>Public):
+    '''Adds the fields marked sensitive in the schema. Returned only by the
+    /admin routes, which require the admin credential.'''
+    << writable_extra_str >>
+<% endif %>
 <% if foreign_keys or relationships %>
 
 class << name >>PublicWithAll(<< name >>Public):

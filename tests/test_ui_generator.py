@@ -751,3 +751,78 @@ def test_reference_sections_render_a_map_for_a_referenced_point(auto_ui, monkeyp
 def test_leaflet_loads_only_when_a_page_has_a_point(rel_ui):
     """Neither the item nor its owner has geometry, so nothing should load."""
     assert "leaflet" not in rel_ui.get("/ui/item/widget-1").text
+
+
+@pytest.fixture()
+def sensitive_ui(monkeypatch):
+    """A UI whose `label` column is marked sensitive, over its own resources dict."""
+    import copy
+
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from sqlalchemy.pool import StaticPool
+    from sqlmodel import Session, create_engine
+
+    from fastapifromfrictionless.web import build_ui_app
+
+    monkeypatch.setenv("ALLOW_NO_AUTH", "true")
+    monkeypatch.delenv("API_KEY", raising=False)
+    monkeypatch.delenv("UI_PROXY_IDENTITY_HEADER", raising=False)
+    monkeypatch.delenv("ADMIN_EMAILS", raising=False)
+    monkeypatch.delenv("ADMIN_API_KEY", raising=False)
+
+    resources = copy.deepcopy(UI_RESOURCES)
+    resources["thing"]["table"] = UiThing
+    resources["thing"]["create"] = UiThingCreate
+    resources["thing"]["update"] = UiThingUpdate
+    for f in resources["thing"]["fields"]:
+        f["sensitive"] = f["name"] == "label"
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    UiThing.__table__.create(engine, checkfirst=True)
+    with Session(engine) as s:
+        s.add(UiThing(code="alpha", label="Secret Name", rank=1))
+        s.commit()
+
+    def get_session():
+        with Session(engine) as session:
+            yield session
+
+    parent = FastAPI()
+    parent.mount("/ui", build_ui_app(resources, get_session))
+    yield TestClient(parent)
+    engine.dispose()
+
+
+def test_sensitive_columns_are_hidden_from_a_non_admin_list(sensitive_ui):
+    """A sensitive field must not reach the browse table for an ordinary viewer."""
+    body = sensitive_ui.get("/ui/thing").text
+    assert "Secret Name" not in body
+    assert "alpha" in body
+
+
+def test_sensitive_columns_are_hidden_from_a_non_admin_detail(sensitive_ui):
+    body = sensitive_ui.get("/ui/thing/alpha").text
+    assert "Secret Name" not in body
+
+
+def test_sensitive_columns_are_shown_to_an_admin(sensitive_ui, monkeypatch):
+    monkeypatch.setenv("UI_PROXY_IDENTITY_HEADER", "X-Who")
+    monkeypatch.setenv("ADMIN_EMAILS", "boss@morpc.org")
+    body = sensitive_ui.get("/ui/thing", headers={"X-Who": "boss@morpc.org"}).text
+    assert "Secret Name" in body
+
+
+def test_a_non_admin_identity_stays_redacted(sensitive_ui, monkeypatch):
+    monkeypatch.setenv("UI_PROXY_IDENTITY_HEADER", "X-Who")
+    monkeypatch.setenv("ADMIN_EMAILS", "boss@morpc.org")
+    body = sensitive_ui.get("/ui/thing", headers={"X-Who": "someone@else.com"}).text
+    assert "Secret Name" not in body
+
+
+def test_sensitive_fields_stay_on_the_form(sensitive_ui):
+    """Hidden from reads, still enterable: the form keeps every field."""
+    body = sensitive_ui.get("/ui/thing/new").text
+    assert 'name="label"' in body
