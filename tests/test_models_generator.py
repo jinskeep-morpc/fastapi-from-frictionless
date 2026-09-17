@@ -704,3 +704,134 @@ def test_geometry_serializer_passes_through_non_wkb_values(tmp_path):
         module.PasiteCreate(id=1, location="POINT(0 0)", footprint=None).model_dump_json()
     )
     assert dumped["location"] == "POINT(0 0)"
+
+
+# ---------------------------------------------------------------------------
+# Multiple foreign keys to one resource (#170)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def roles_folder(tmp_path):
+    """A deployment referencing contact twice, under role names."""
+    write_schema(
+        tmp_path,
+        "contact",
+        """\
+        fields:
+          - name: id
+            type: integer
+            constraints: {required: true}
+        primaryKey: [id]
+        """,
+    )
+    write_schema(
+        tmp_path,
+        "deployment",
+        """\
+        fields:
+          - name: name
+            type: string
+            constraints: {required: true}
+          - name: owner_id
+            type: integer
+          - name: site_contact_id
+            type: integer
+        primaryKey: [name]
+        foreignKeys:
+          - fields: [owner_id]
+            reference: {resource: contact, fields: [id]}
+          - fields: [site_contact_id]
+            reference: {resource: contact, fields: [id]}
+        """,
+    )
+    return tmp_path
+
+
+def test_fk_target_comes_from_the_reference_not_the_column_name(roles_folder, tmp_path):
+    # The target used to be the column with underscores turned into dots, so
+    # owner_id became 'owner.id' and site_contact_id became 'site.contact.id'.
+    out = tmp_path / "models.py"
+    models(folder_str(roles_folder)).build().save(out)
+    text = out.read_text()
+    assert "foreign_key='contact.id', index=True" in text
+    assert "owner.id" not in text
+    assert "site.contact.id" not in text
+
+
+def test_role_named_fk_resolves_to_the_referenced_class(roles_folder, tmp_path):
+    # The related class used to come from the column prefix, generating
+    # Optional['Owner'] and Optional['Site'] -- classes that do not exist.
+    out = tmp_path / "models.py"
+    models(folder_str(roles_folder)).build().save(out)
+    text = out.read_text()
+    assert "owner: Optional['Contact']" in text
+    assert "site_contact: Optional['Contact']" in text
+    assert "Optional['Owner']" not in text
+    assert "Optional['Site']" not in text
+
+
+def test_duplicate_fks_get_disambiguating_relationship_kwargs(roles_folder, tmp_path):
+    out = tmp_path / "models.py"
+    models(folder_str(roles_folder)).build().save(out)
+    text = out.read_text()
+    assert "'foreign_keys': '[Deployment.owner_id]'" in text
+    assert "'foreign_keys': '[Deployment.site_contact_id]'" in text
+    # One reverse collection per incoming key, named after the forward attribute.
+    assert "owner_deployments: list['Deployment']" in text
+    assert "site_contact_deployments: list['Deployment']" in text
+
+
+def test_duplicate_fks_configure_in_sqlalchemy(tmp_path):
+    """Without foreign_keys= this raises AmbiguousForeignKeysError at configure time.
+
+    Unique resource names: SQLModel.metadata is process-global, so reusing
+    `deployment` here collides with the other fixtures.
+    """
+    from sqlalchemy.orm import configure_mappers
+
+    write_schema(
+        tmp_path,
+        "roleparty",
+        """\
+        fields:
+          - name: id
+            type: integer
+            constraints: {required: true}
+        primaryKey: [id]
+        """,
+    )
+    write_schema(
+        tmp_path,
+        "roleplacement",
+        """\
+        fields:
+          - name: name
+            type: string
+            constraints: {required: true}
+          - name: owner_id
+            type: integer
+          - name: site_contact_id
+            type: integer
+        primaryKey: [name]
+        foreignKeys:
+          - fields: [owner_id]
+            reference: {resource: roleparty, fields: [id]}
+          - fields: [site_contact_id]
+            reference: {resource: roleparty, fields: [id]}
+        """,
+    )
+    module = _load(tmp_path, tmp_path, "generated_roles_models")
+    configure_mappers()
+    assert module.Roleplacement.owner.prop.entity.class_.__name__ == "Roleparty"
+    assert module.Roleplacement.site_contact.prop.entity.class_.__name__ == "Roleparty"
+    assert module.Roleparty.owner_roleplacements.prop.entity.class_.__name__ == "Roleplacement"
+
+
+def test_single_fk_keeps_its_unprefixed_reverse_collection(fk_folder, tmp_path):
+    """Backward compatibility: one FK per resource is named as it always was."""
+    out = tmp_path / "models.py"
+    models(folder_str(fk_folder)).build().save(out)
+    text = out.read_text()
+    assert "deployments: list['Deployment']" in text
+    assert "foreign_keys" not in text

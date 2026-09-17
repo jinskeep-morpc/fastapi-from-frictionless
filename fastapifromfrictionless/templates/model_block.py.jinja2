@@ -18,11 +18,11 @@ class << name >>(<< name >>Base, TimestampMixin, table=True):
 <% if auto_id %>
     id: int | None = Field(default=None, primary_key=True)
 <% endif %>
-<% for rel in relationships %>
-    << rel.lower() >>s: list['<< rel >>'] | None = Relationship(back_populates='<< name.lower() >>')
+<% for rel in rel_models %>
+    << rel.attr >>: list['<< rel.name >>'] | None = Relationship(back_populates='<< rel.back_populates >>'<% if rel.fk_ref %>, sa_relationship_kwargs={'foreign_keys': '<< rel.fk_ref >>'}<% endif %>)
 <% endfor %>
 <% for fk in fk_models %>
-    << fk.prefix >>: Optional['<< fk.related >>'] = Relationship(back_populates='<< name.lower() >>s')
+    << fk.prefix >>: Optional['<< fk.related >>'] = Relationship(back_populates='<< fk.back_populates >>'<% if fk.fk_ref %>, sa_relationship_kwargs={'foreign_keys': '<< fk.fk_ref >>'}<% endif %>)
 <% endfor %>
 <% if not auto_id and not relationships and not foreign_keys %>
     pass
@@ -52,9 +52,9 @@ class << name >>PublicWithAll(<< name >>Public):
 <% endfor %>
 <% for rel in rel_models %>
 <% if rel.is_link %>
-    << rel.lower_name >>s: List['<< rel.name >>PublicWith<< rel.joined >>'] | None = None
+    << rel.attr >>: List['<< rel.name >>PublicWith<< rel.joined >>'] | None = None
 <% else %>
-    << rel.lower_name >>s: List['<< rel.name >>Public'] | None = None
+    << rel.attr >>: List['<< rel.name >>Public'] | None = None
 <% endif %>
 <% endfor %>
 <% endif %>
