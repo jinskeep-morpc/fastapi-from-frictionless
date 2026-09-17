@@ -7,7 +7,7 @@ import secrets
 import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import Depends, FastAPI, File, HTTPException, Query, Security, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, Security, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -30,6 +30,39 @@ _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 async def verify_api_key(api_key: str = Security(_api_key_header)):
     if _API_KEY and not secrets.compare_digest(api_key or "", _API_KEY):
         raise HTTPException(status_code=403, detail="Invalid or missing API key")
+
+# Admin auth — guards the /admin routes, which are the only ones returning fields
+# marked `sensitive` in the schema. Two mechanisms, checked in order, so that
+# per-person identity can be adopted without changing any route:
+#
+#   1. ADMIN_API_KEY, presented as X-Admin-Key. A shared secret: it identifies a
+#      credential, not a person.
+#   2. An identity-aware proxy (Cloudflare Access, Tailscale, oauth2-proxy). Set
+#      UI_PROXY_IDENTITY_HEADER to the header it injects and ADMIN_EMAILS to a
+#      comma-separated allowlist. Only safe where that proxy is the ONLY route to
+#      the app; anything that can reach it directly can forge the header.
+#
+# With neither configured there is no admin access at all, which is the safe
+# default: the sensitive fields simply cannot be read through the API.
+_ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
+_ADMIN_EMAILS = {
+    e.strip().lower() for e in os.getenv("ADMIN_EMAILS", "").split(",") if e.strip()
+}
+_PROXY_IDENTITY_HEADER = os.getenv("UI_PROXY_IDENTITY_HEADER", "").strip()
+_admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
+
+def _identity_is_admin(request: Request) -> bool:
+    if not _PROXY_IDENTITY_HEADER or not _ADMIN_EMAILS:
+        return False
+    who = (request.headers.get(_PROXY_IDENTITY_HEADER) or "").strip().lower()
+    return bool(who) and who in _ADMIN_EMAILS
+
+async def require_admin(request: Request, admin_key: str = Security(_admin_key_header)):
+    if _ADMIN_API_KEY and admin_key and secrets.compare_digest(admin_key, _ADMIN_API_KEY):
+        return
+    if _identity_is_admin(request):
+        return
+    raise HTTPException(status_code=403, detail="Admin credentials required")
 
 # Excel file endpoints config
 # Set SCHEMA_FOLDER to the directory containing *.schema.yaml files.

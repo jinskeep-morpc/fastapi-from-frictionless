@@ -44,6 +44,7 @@ class ui:
                 f"{fk['reference']['fields'][0] if isinstance(fk['reference']['fields'], list) else fk['reference']['fields']}"
                 for fk in schema.foreign_keys
             }
+            sensitive = set(ctx.sensitive_fields_of(filename))
             fields = []
             for field_name in schema.field_names:
                 field = schema.get_field(field_name)
@@ -53,6 +54,7 @@ class ui:
                         "type": field.type,
                         "required": "required" in field.constraints,
                         "fk": foreign_keys.get(field.name),
+                        "sensitive": field.name in sensitive,
                     }
                 )
             self.resources.append(

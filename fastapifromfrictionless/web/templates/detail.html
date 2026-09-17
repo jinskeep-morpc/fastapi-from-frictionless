@@ -14,7 +14,7 @@
 <div id="delete-error"></div>
 
 <dl class="detail">
-  {% for f in res.fields %}
+  {% for f in (res.fields if is_admin else res.display_fields) %}
     {% set v = row|attr(f.name) %}
     <dt>{{ f.name }}</dt>
     <dd>
@@ -37,7 +37,7 @@
 {% for fwd in forward %}
 <h2>{{ fwd.label }} <span class="muted" style="font-weight:400;font-size:.7em">via {{ fwd.field }}</span></h2>
 <dl class="detail">
-  {% for f in fwd.res.fields %}
+  {% for f in (fwd.res.fields if is_admin else fwd.res.display_fields) %}
     {% set fv = fwd.row|attr(f.name) %}
     <dt>{{ f.name }}</dt>
     <dd>
@@ -62,12 +62,12 @@
     <p class="muted">None yet. <a href="{{ prefix }}/{{ rel.slug }}/new">Add one</a>.</p>
   {% else %}
   <table>
-    <thead><tr>{% for f in rel.res.fields[:5] %}<th>{{ f.name }}</th>{% endfor %}<th></th></tr></thead>
+    <thead><tr>{% for f in (rel.res.fields if is_admin else rel.res.display_fields)[:5] %}<th>{{ f.name }}</th>{% endfor %}<th></th></tr></thead>
     <tbody>
     {% for r in rel.rows %}
       {% set rpk = pk_of(r, rel.res) %}
       <tr>
-        {% for f in rel.res.fields[:5] %}
+        {% for f in (rel.res.fields if is_admin else rel.res.display_fields)[:5] %}
           {% set rv = r|attr(f.name) %}
           <td title="{{ rv if rv is not none else '' }}">{{ "" if rv is none else rv }}</td>
         {% endfor %}

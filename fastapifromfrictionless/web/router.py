@@ -10,7 +10,14 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import String, cast, or_
 from sqlmodel import Session, func, select
 
-from .auth import COOKIE_NAME, auth_disabled, expected_key, identify, proxy_identity_header
+from .auth import (
+    COOKIE_NAME,
+    auth_disabled,
+    expected_key,
+    identify,
+    is_admin,
+    proxy_identity_header,
+)
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
@@ -63,6 +70,15 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
 
     # A resource's slug and its table name differ (slug "sensor-note" is table
     # "sensornote"), and foreign keys name the table. Map one to the other once.
+    # Read views render this narrowed list unless the viewer is an admin; forms keep
+    # every field, so a sensitive value can still be entered. Derived here rather
+    # than by the generator so that any resource mapping gets it.
+    for _r in resources.values():
+        # Assigned, not setdefault: this is derived from `fields` and must never
+        # come from the caller. A stale or supplied list would silently put a
+        # sensitive column back into the read views.
+        _r["display_fields"] = [f for f in _r["fields"] if not f.get("sensitive")]
+
     slug_of_table = {r["table"].__tablename__: slug for slug, r in resources.items()}
 
     def ctx(request: Request, **extra):
@@ -71,6 +87,7 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
             "resources": resources,
             "prefix": prefix,
             "user": identify(request),
+            "is_admin": is_admin(request),
             "proxy_auth": bool(proxy_identity_header()),
             "map_tile_url": os.getenv(
                 "UI_MAP_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png"

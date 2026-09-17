@@ -109,7 +109,7 @@ class models:
             self.logger.info(f"{name} is a many-to-many link table.")
 
         # Build base model field strings
-        basemodel_fields: list[str] = []
+        basemodel_fields: list[tuple[str, str]] = []
         for field_name in schema.field_names:
             field = schema.get_field(field_name)
 
@@ -133,7 +133,7 @@ class models:
                         f"Field(default=None, sa_column=Column({geometry}{uniq_arg}))"
                     )
                 self.logger.info(f"{field} converted to {field_string}")
-                basemodel_fields.append(field_string)
+                basemodel_fields.append((field.name, field_string))
                 continue
 
             field_string = f"{field.name}: "
@@ -168,7 +168,7 @@ class models:
                     field_string += " = Field(unique=True)"
 
             self.logger.info(f"{field} converted to {field_string}")
-            basemodel_fields.append(field_string)
+            basemodel_fields.append((field.name, field_string))
 
         # Geo fields need a pydantic serializer on the base model: the annotation is
         # Any, so a WKBElement read back from the database has nothing to dump it. See #167.
@@ -176,16 +176,26 @@ class models:
         if geo_fields:
             self.logger.info(f"{name} geo fields needing a serializer: {geo_fields}")
 
-        # Precompute derived template context
-        basemodel_fields_str = "\n    ".join(basemodel_fields)
+        # Sensitive fields are held out of the base model so XPublic, which every
+        # read route returns, cannot carry them. They are declared on the table
+        # model (they are real columns), on XCreate and XUpdate (they are
+        # writable), and on XAdmin (readable behind the admin routes).
+        sensitive = set(ctx.sensitive_fields_of(filename))
+        if sensitive:
+            self.logger.info(f"{name} sensitive fields: {sorted(sensitive)}")
 
-        update_lines = []
-        for fs in basemodel_fields:
-            fs = fs.split(" = ")[0] if " = " in fs else fs
-            if " | None" not in fs:
-                fs += " | None"
-            update_lines.append(f"    {fs}")
-        update_fields_str = "\n".join(update_lines)
+        def _optional(fs):
+            ann = fs.split(" = ")[0] if " = " in fs else fs
+            return ann if " | None" in ann else f"{ann} | None"
+
+        base_pairs = [(n, fs) for n, fs in basemodel_fields if n not in sensitive]
+        sens_pairs = [(n, fs) for n, fs in basemodel_fields if n in sensitive]
+
+        basemodel_fields_str = "\n    ".join(fs for _, fs in base_pairs)
+        table_extra_str = "\n    ".join(fs for _, fs in sens_pairs)
+        writable_extra_str = "\n    ".join(f"{_optional(fs)} = None" for _, fs in sens_pairs)
+
+        update_fields_str = "\n".join(f"    {_optional(fs)}" for _, fs in basemodel_fields)
 
         # The related class comes from reference.resource, the attribute from the
         # column. Deriving both from the column prefix, as this used to, generated
@@ -218,6 +228,9 @@ class models:
             auto_id=auto_id,
             link_table=link_table,
             basemodel_fields_str=basemodel_fields_str,
+            table_extra_str=table_extra_str,
+            writable_extra_str=writable_extra_str,
+            has_sensitive=bool(sens_pairs),
             update_fields_str=update_fields_str,
             foreign_keys=foreign_keys,
             relationships=relationships,

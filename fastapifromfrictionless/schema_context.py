@@ -102,6 +102,22 @@ class SchemaContext:
                 )
         return out
 
+    def sensitive_fields_of(self, filename: str) -> list[str]:
+        """Fields marked ``sensitive: true``, a custom schema property.
+
+        A sensitive field is writable but not readable by ordinary callers: it is
+        kept out of the base model, so ``XPublic`` cannot carry it, and surfaced
+        only on ``XAdmin`` behind the admin routes. Not OpenAPI's ``writeOnly``,
+        which would hide it from everyone including an administrator.
+        """
+        schema = self.schema_of(filename)
+        out = []
+        for name in schema.field_names:
+            custom = getattr(schema.get_field(name), "custom", None) or {}
+            if custom.get("sensitive"):
+                out.append(name)
+        return out
+
     def relationships_of(self, filename: str) -> list[str]:
         target = self.name_of(filename).lower()
         relationships: list[str] = []

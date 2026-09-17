@@ -20,6 +20,41 @@ def proxy_identity_header() -> str:
     return os.getenv("UI_PROXY_IDENTITY_HEADER", "").strip()
 
 
+def admin_key() -> str:
+    return os.getenv("ADMIN_API_KEY", "")
+
+
+def admin_emails() -> set[str]:
+    return {e.strip().lower() for e in os.getenv("ADMIN_EMAILS", "").split(",") if e.strip()}
+
+
+def is_admin(request) -> bool:
+    """Whether this caller may see fields marked sensitive in the schema.
+
+    Two mechanisms, matching the generated API's /admin routes, so adopting
+    per-person identity later changes no templates:
+
+      1. An identity proxy: UI_PROXY_IDENTITY_HEADER names the header, and the
+         address must appear in ADMIN_EMAILS.
+      2. Signing in with ADMIN_API_KEY instead of the ordinary API_KEY.
+
+    With neither configured nobody is an admin, which is the safe default: the
+    sensitive columns are simply not rendered.
+    """
+    header = proxy_identity_header()
+    if header:
+        who = (request.headers.get(header) or "").strip().lower()
+        if who and who in admin_emails():
+            return True
+
+    key = admin_key()
+    if key:
+        presented = request.cookies.get(COOKIE_NAME) or request.headers.get("X-Admin-Key")
+        if presented and _equal(presented, key):
+            return True
+    return False
+
+
 def expected_key() -> str:
     return os.getenv("API_KEY", "")
 
@@ -49,6 +84,10 @@ def identify(request) -> str | None:
     # Constant-time comparison: this is a shared secret checked on every request.
     if presented and _equal(presented, key):
         return "signed in"
+    # The admin key is also a valid sign-in, so an administrator does not need to
+    # hold both secrets to use the UI.
+    if presented and admin_key() and _equal(presented, admin_key()):
+        return "signed in (admin)"
     return None
 
 

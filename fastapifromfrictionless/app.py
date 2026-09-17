@@ -62,6 +62,7 @@ class app:
             has_relations=has_relations,
             list_response_model=list_response_model,
             get_response_model=get_response_model,
+            has_sensitive=bool(ctx.sensitive_fields_of(filename)),
         )
 
     def save(self, filepath: str | os.PathLike):
