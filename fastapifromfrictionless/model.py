@@ -84,6 +84,16 @@ class models:
         foreign_keys = ctx.foreign_keys_of(filename)
         self.logger.info(f"Schema {name} foreign keys {foreign_keys}")
 
+        # The referenced table and column come from the foreign key declaration.
+        # Deriving them by turning underscores into dots, as this used to, gave
+        # owner_id -> 'owner.id' for a column pointing at contact, and
+        # site_contact_id -> 'site.contact.id', neither of which exists. The table
+        # name is the related model's name lowercased, which is what SQLModel uses.
+        fk_targets = {
+            d["column"]: f"{d['related'].lower()}.{d['ref_field']}"
+            for d in ctx.fk_details_of(filename)
+        }
+
         relationships = ctx.relationships_of(filename)
         if not relationships:
             self.logger.info(f"{name} not referenced by other schemas.")
@@ -141,9 +151,15 @@ class models:
 
             if field.name in foreign_keys:
                 if " = Field(primary_key = True)" in field_string:
-                    field_string = f"{field_string.rstrip(')')}, foreign_key='{field.name.replace('_', '.')}', index=True)"
+                    field_string = (
+                        f"{field_string.rstrip(')')}, "
+                        f"foreign_key='{fk_targets[field.name]}', index=True)"
+                    )
                 else:
-                    field_string += f" = Field({'default=None, ' if required else ''}foreign_key='{field.name.replace('_', '.')}', index=True)"
+                    field_string += (
+                        f" = Field({'default=None, ' if required else ''}"
+                        f"foreign_key='{fk_targets[field.name]}', index=True)"
+                    )
 
             if unique:
                 if " = Field(" in field_string:
@@ -171,18 +187,30 @@ class models:
             update_lines.append(f"    {fs}")
         update_fields_str = "\n".join(update_lines)
 
-        fk_models = [
-            {"field": fk, "prefix": fk.split("_")[0], "related": fk.split("_")[0].capitalize()}
-            for fk in foreign_keys
-        ]
+        # The related class comes from reference.resource, the attribute from the
+        # column. Deriving both from the column prefix, as this used to, generated
+        # Optional['Owner'] for an owner_id pointing at contact -- a class that
+        # does not exist -- and allowed only one reference per resource per table.
+        fk_models = []
+        for d in ctx.fk_details_of(filename):
+            reverse = f"{name.lower()}s"
+            fk_models.append(
+                {
+                    "field": d["column"],
+                    "prefix": d["attr"],
+                    "related": d["related"],
+                    "back_populates": f"{d['attr']}_{reverse}" if d["ambiguous"] else reverse,
+                    "fk_ref": f"[{name}.{d['column']}]" if d["ambiguous"] else None,
+                }
+            )
 
         rel_models = []
-        for rel in relationships:
-            is_link = rel.startswith("Link")
-            joined = rel.replace("Link", "").replace(name, "").replace("-", "") if is_link else ""
-            rel_models.append(
-                {"name": rel, "lower_name": rel.lower(), "is_link": is_link, "joined": joined}
+        for r in ctx.reverse_fks_of(filename):
+            is_link = r["name"].startswith("Link")
+            joined = (
+                r["name"].replace("Link", "").replace(name, "").replace("-", "") if is_link else ""
             )
+            rel_models.append({**r, "is_link": is_link, "joined": joined})
 
         template = _env.get_template("model_block.py.jinja2")
         result = template.render(
