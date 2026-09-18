@@ -73,6 +73,7 @@ class models:
             self.models.append(model)
 
         self.has_geo = any("Geometry" in m for m in self.models)
+        self.has_indexes = any("__table_args__" in m for m in self.models)
         return self
 
     def build_model(self, filename: str) -> str:
@@ -180,6 +181,22 @@ class models:
         # read route returns, cannot carry them. They are declared on the table
         # model (they are real columns), on XCreate and XUpdate (they are
         # writable), and on XAdmin (readable behind the admin routes).
+        # Declared indexes become __table_args__, so create_db_and_tables() produces
+        # them on a fresh database. An index on a foreign key column is dropped from
+        # the list: the generator already sets index=True there, and declaring the
+        # same name twice is an error.
+        index_specs = [
+            spec for spec in ctx.index_specs_of(filename) if spec["column"] not in foreign_keys
+        ]
+        index_args = ", ".join(
+            f"Index('{spec['name']}', '{spec['column']}'"
+            + (f", postgresql_using='{spec['method']}'" if spec["method"] else "")
+            + ")"
+            for spec in index_specs
+        )
+        if index_specs:
+            self.logger.info(f"{name} indexes: {[s['name'] for s in index_specs]}")
+
         sensitive = set(ctx.sensitive_fields_of(filename))
         if sensitive:
             self.logger.info(f"{name} sensitive fields: {sorted(sensitive)}")
@@ -231,6 +248,7 @@ class models:
             table_extra_str=table_extra_str,
             writable_extra_str=writable_extra_str,
             has_sensitive=bool(sens_pairs),
+            index_args=index_args,
             update_fields_str=update_fields_str,
             foreign_keys=foreign_keys,
             relationships=relationships,
@@ -243,7 +261,8 @@ class models:
 
     def save(self, path: str | PathLike):
         header = _env.get_template("models_header.py.jinja2").render(
-            has_geo=getattr(self, "has_geo", True)
+            has_geo=getattr(self, "has_geo", True),
+            has_indexes=getattr(self, "has_indexes", True),
         )
         with open(path, "w") as file:
             file.write(header + "".join(self.models))

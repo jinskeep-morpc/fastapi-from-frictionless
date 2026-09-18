@@ -7,6 +7,7 @@ import pathlib
 def _generate(args):
     from .app import app
     from .database import database
+    from .indexes import indexes
     from .model import models
     from .uigen import ui
 
@@ -19,6 +20,10 @@ def _generate(args):
     app_gen = app(args.schema_folder, with_ui=gen_ui).build() if gen_app else None
     ui_gen = ui(args.schema_folder, skip=getattr(args, "skip_ui", None)).build() if gen_ui else None
     db_gen = database(args.schema_folder).build(args.db_filename) if gen_db else None
+    # Only written when something is declared, so a schema folder without
+    # indexes does not gain a confusing empty file.
+    idx_gen = indexes(args.schema_folder).build()
+    idx_gen = idx_gen if idx_gen.specs else None
 
     if args.dry_run:
         if models_gen:
@@ -40,6 +45,8 @@ def _generate(args):
         db_gen.save(out / "database.py")
     if ui_gen:
         ui_gen.save(out / "ui.py")
+    if idx_gen:
+        idx_gen.save(out / "indexes.sql")
     if gen_models or gen_app or gen_db:
         (out / "__init__.py").touch()
 
@@ -50,6 +57,7 @@ def _generate(args):
             ("app.py", gen_app),
             ("database.py", gen_db),
             ("ui.py", gen_ui),
+            ("indexes.sql", idx_gen is not None),
         ]
         if flag
     ]

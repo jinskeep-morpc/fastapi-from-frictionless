@@ -12,6 +12,7 @@ from .logging_config import configure_logging
 try:
     from .app import app
     from .database import database
+    from .indexes import indexes
     from .model import models
     from .schema_context import SchemaContext
     from .validate import assert_schemas_valid, validate_schemas

@@ -1,8 +1,12 @@
 
 from typing import Any, Optional, List
 from uuid import UUID
-<% if has_geo %>
+<% if has_geo and has_indexes %>
+from sqlalchemy import Column, DateTime, Index
+<% elif has_geo %>
 from sqlalchemy import Column, DateTime
+<% elif has_indexes %>
+from sqlalchemy import DateTime, Index
 <% else %>
 from sqlalchemy import DateTime
 <% endif %>

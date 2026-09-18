@@ -15,6 +15,9 @@ class << name >>Base(SQLModel):
 <% endfor %>
 
 class << name >>(<< name >>Base, TimestampMixin, table=True):
+<% if index_args %>
+    __table_args__ = (<< index_args >>,)
+<% endif %>
 <% if auto_id %>
     id: int | None = Field(default=None, primary_key=True)
 <% endif %>
