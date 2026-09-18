@@ -102,6 +102,36 @@ class SchemaContext:
                 )
         return out
 
+    def index_specs_of(self, filename: str) -> list[dict]:
+        """Single-column indexes declared with ``index:`` on a field.
+
+        ``index: true`` means the default btree; a string names the access
+        method, so ``index: brin`` gives a BRIN index -- the right choice for an
+        append-only timestamp, where a btree costs orders of magnitude more space
+        for the same range scan.
+
+        Names are deterministic, ``ix_<table>_<column>``, so the generated SQL and
+        the generated models agree on what already exists.
+        """
+        schema = self.schema_of(filename)
+        table = self.name_of(filename).lower()
+        specs: list[dict] = []
+        for field_name in schema.field_names:
+            custom = getattr(schema.get_field(field_name), "custom", None) or {}
+            declared = custom.get("index")
+            if not declared:
+                continue
+            method = None if declared is True else str(declared).lower()
+            specs.append(
+                {
+                    "name": f"ix_{table}_{field_name}",
+                    "table": table,
+                    "column": field_name,
+                    "method": method,
+                }
+            )
+        return specs
+
     def sensitive_fields_of(self, filename: str) -> list[str]:
         """Fields marked ``sensitive: true``, a custom schema property.
 
