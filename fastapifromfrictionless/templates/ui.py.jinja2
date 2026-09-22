@@ -3,6 +3,11 @@
 # Wiring for the browser CRUD UI. Deliberately thin: the descriptor below
 # describes each resource, and the router, views and templates come from
 # fastapifromfrictionless.web so they can be fixed without regenerating.
+#
+# A field carrying "sensitive": True is kept out of every read view by the
+# router; it stays on the forms so the value can still be entered. The flag has
+# to be emitted here -- the router derives display_fields by filtering on it, so
+# a descriptor that omits it renders the column to everyone.
 from fastapifromfrictionless.web import build_ui_app
 
 from .database import engine
@@ -25,7 +30,7 @@ RESOURCES = {
         "update": << r.name >>Update,
         "fields": [
 <% for f in r.fields %>
-            {"name": "<< f.name >>", "type": "<< f.type >>", "required": << f.required >>, "fk": << ('"' ~ f.fk ~ '"') if f.fk else "None" >>},
+            {"name": "<< f.name >>", "type": "<< f.type >>", "required": << f.required >>, "fk": << ('"' ~ f.fk ~ '"') if f.fk else "None" >><% if f.sensitive %>, "sensitive": True<% endif %>},
 <% endfor %>
         ],
     },
