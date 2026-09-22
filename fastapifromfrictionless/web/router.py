@@ -12,6 +12,7 @@ from sqlmodel import Session, func, select
 
 from .auth import (
     COOKIE_NAME,
+    admin_key,
     auth_disabled,
     expected_key,
     identify,
@@ -128,7 +129,14 @@ def build_ui_app(resources: dict, get_session, prefix: str = "/ui") -> FastAPI:
     def login(request: Request, api_key: str = Form("")):
         import hmac
 
-        if expected_key() and hmac.compare_digest(api_key, expected_key()):
+        # Either key signs in. identify() has always said so -- "the admin key is
+        # also a valid sign-in, so an administrator does not need to hold both
+        # secrets" -- but this handler accepted only the ordinary key, so the
+        # admin key could never become the cookie that is_admin() looks for.
+        # With ADMIN_EMAILS unset that left no way to reveal a sensitive column
+        # in the browser at all.
+        accepted = [k for k in (expected_key(), admin_key()) if k]
+        if any(hmac.compare_digest(api_key, k) for k in accepted):
             response = RedirectResponse(prefix, status_code=303)
             response.set_cookie(
                 COOKIE_NAME,
