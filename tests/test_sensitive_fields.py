@@ -152,3 +152,82 @@ def test_identity_allowlist_grants_admin(monkeypatch):
 
     assert is_admin(Req("BOSS@morpc.org")) is True
     assert is_admin(Req("stranger@example.com")) is False
+
+
+def test_ui_descriptor_marks_sensitive_fields(pii_folder, tmp_path):
+    """The generated UI descriptor must carry the flag the router filters on.
+
+    router.py derives display_fields as [f for f in fields if not
+    f.get("sensitive")]. The flag used to be computed by uigen and then dropped
+    by the template, so the filter matched nothing and every sensitive column
+    was rendered to anyone who could sign in.
+    """
+    from fastapifromfrictionless.uigen import ui
+
+    out = tmp_path / "ui.py"
+    ui(str(pii_folder)).build().save(out)
+    text = out.read_text()
+
+    assert '{"name": "full_name"' in text
+    for line in text.splitlines():
+        if '"name": "full_name"' in line:
+            assert '"sensitive": True' in line, line
+        if '"name": "id"' in line:
+            assert "sensitive" not in line, line
+
+
+def test_ui_hides_sensitive_values_from_an_ordinary_viewer(monkeypatch):
+    """End to end: the rendered list must not contain a sensitive value."""
+    from fastapifromfrictionless.web.router import build_ui_app
+
+    monkeypatch.setenv("API_KEY", "ordinary")
+    monkeypatch.setenv("ADMIN_API_KEY", "administrator")
+    monkeypatch.delenv("ADMIN_EMAILS", raising=False)
+    monkeypatch.delenv("UI_PROXY_IDENTITY_HEADER", raising=False)
+
+    from fastapi.testclient import TestClient
+    from sqlalchemy.pool import StaticPool
+    from sqlmodel import Field, Session, SQLModel, create_engine
+
+    class Party(SQLModel, table=True):
+        __tablename__ = "party_uitest"
+        id: int = Field(primary_key=True)
+        full_name: str = ""
+
+    # StaticPool keeps one connection, so the in-memory database survives
+    # between the setup session and the request the TestClient makes.
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    SQLModel.metadata.create_all(engine, tables=[Party.__table__])
+    with Session(engine) as s:
+        s.add(Party(id=1, full_name="Jane Resident"))
+        s.commit()
+
+    def get_session():
+        with Session(engine) as session:
+            yield session
+
+    resources = {
+        "party": {
+            "label": "Party",
+            "pk": ["id"],
+            "table": Party,
+            "create": Party,
+            "update": Party,
+            "fields": [
+                {"name": "id", "type": "integer", "required": True, "fk": None},
+                {"name": "full_name", "type": "string", "required": False,
+                 "fk": None, "sensitive": True},
+            ],
+        }
+    }
+
+    def page(key):
+        client = TestClient(build_ui_app(resources, get_session))
+        client.post("/login", data={"api_key": key}, follow_redirects=False)
+        return client.get("/party", follow_redirects=False).text
+
+    assert "Jane Resident" not in page("ordinary")
+    # The admin key is a valid sign-in in its own right, and reveals the column.
+    assert "Jane Resident" in page("administrator")
