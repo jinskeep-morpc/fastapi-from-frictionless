@@ -6,6 +6,11 @@ from sqlmodel import SQLModel, create_engine
 _default_url = f"sqlite:///<< db_filepath >>"
 database_url = os.getenv("DATABASE_URL", _default_url)
 
+# SQLAlchemy 2.1 maps a bare postgresql:// to psycopg 3; the app ships psycopg2 ([app] extra).
+# A URL that names its driver is left alone.
+if database_url.startswith(("postgresql://", "postgres://")):
+    database_url = "postgresql+psycopg2://" + database_url.split("://", 1)[1]
+
 connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
 engine = create_engine(database_url, echo=False, connect_args=connect_args)
 

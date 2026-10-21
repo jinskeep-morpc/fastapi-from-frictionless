@@ -217,8 +217,13 @@ def test_ui_hides_sensitive_values_from_an_ordinary_viewer(monkeypatch):
             "update": Party,
             "fields": [
                 {"name": "id", "type": "integer", "required": True, "fk": None},
-                {"name": "full_name", "type": "string", "required": False,
-                 "fk": None, "sensitive": True},
+                {
+                    "name": "full_name",
+                    "type": "string",
+                    "required": False,
+                    "fk": None,
+                    "sensitive": True,
+                },
             ],
         }
     }

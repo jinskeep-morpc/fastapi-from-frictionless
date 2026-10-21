@@ -32,6 +32,8 @@ app = [
     "geoalchemy2",
     # geoalchemy2.shape.to_shape needs it; without it a geo response cannot be serialized.
     "shapely",
+    # The generated database.py maps postgresql:// to this driver (#179).
+    "psycopg2-binary",
 ]
 generate = [
     "jinja2",
@@ -48,6 +50,8 @@ dev = [
     "shapely",
     # starlette.testclient needs httpx; the UI tests drive a live app through it.
     "httpx",
+    # The #179 tests build a real psycopg2 engine from the generated database.py.
+    "psycopg2-binary",
 ]
 
 [project.scripts]

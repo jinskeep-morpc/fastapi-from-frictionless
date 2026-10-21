@@ -1,3 +1,14 @@
+## 2026-10-21 15:41 — Bare postgresql:// now runs on psycopg2 (#179)
+
+SQLAlchemy 2.1 made psycopg 3 the default driver for `postgresql://`. The generated app ships psycopg2 only, so downstream images rebuilt with the usual URL crash-looped at import (`No module named 'psycopg'`). geos and purpleair had pinned `sqlalchemy<2.1` in their Dockerfiles as a stopgap.
+
+- `database.py.jinja2` rewrites `postgresql://` and `postgres://` to `postgresql+psycopg2://`. Driver-qualified URLs and SQLite pass through. The rewrite is in the generated file, not the environment, so other readers of `DATABASE_URL` (libpq, `psycopg2.connect`, Martin) keep the bare form they need.
+- `psycopg2-binary` is now in the `[app]` extra (the driver the generated code selects) and in `[dev]` (for the new tests).
+- CI tests on SQLAlchemy 2.0 and the latest release. Nothing had caught this because every test ran on SQLite.
+- `tests/test_sensitive_fields.py` was reformatted. CI on main had failed at `ruff format --check` since 0.9.1, so mypy and pytest had not run there.
+
+New tests: a bare URL gives the psycopg2 driver; a driver-qualified URL and SQLite are untouched. The bare-URL cases fail with the template change reverted. 250 tests pass on SQLAlchemy 2.0.55 and 2.1.6.
+
 # 2026-09-16 — references show every field, and their maps
 
 The forward reference cards showed three fields, so anything else meant opening the referenced
