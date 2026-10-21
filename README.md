@@ -38,7 +38,7 @@ An ASGI server such as [uvicorn](https://www.uvicorn.org/) is required to run th
 pip install fastapifromfrictionless
 ```
 
-For environments that run the **generated app** (FK query endpoints, geo field types):
+For environments that run the **generated app** (FK query endpoints, geo field types, the PostgreSQL driver):
 
 ```bash
 pip install "fastapifromfrictionless[app]"
@@ -251,7 +251,7 @@ few trusted editors, and anything more needs real accounts.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `sqlite:///database.db` | Database connection URL (overrides SQLite default) |
+| `DATABASE_URL` | `sqlite:///database.db` | Database connection URL (overrides SQLite default). A bare `postgresql://` or `postgres://` URL is run with psycopg2, which the `[app]` extra installs; a URL that names its driver (`postgresql+psycopg://`) is used as given. |
 | `ALLOWED_ORIGINS` | `*` | Comma-separated CORS allowed origins |
 | `API_KEY` | *(required)* | All requests require `X-API-Key: <value>` header. App refuses to start if unset unless `ALLOW_NO_AUTH=true` is also set. |
 | `ALLOW_NO_AUTH` | *(unset)* | Set to `true` to start the app without `API_KEY` (dev only — logs a warning, do not use in production) |
